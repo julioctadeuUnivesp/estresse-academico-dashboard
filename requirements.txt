@@ -1,2 +1,8 @@
 python >=3.8
 pip >=21.0
+Pandas >=1.5.0
+Streamlit >=1.22.0
+Plotly >=5.13.0
+NumPy >=1.23.0
+Matplotlib >=3.7.0
+Seaborn >=0.12.0
