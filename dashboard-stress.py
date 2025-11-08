@@ -26,16 +26,40 @@ df = load_data()
 st.title("📊 Dashboard de Estresse Acadêmico - Univesp")
 st.markdown("---")
 
-# Sidebar com filtros
-st.sidebar.header("🔍 Filtros")
+# Filtros em formato de gráficos (pizza) no cabeçalho
+st.markdown("### 🔍 Filtros (clique/selecione abaixo)")
 
-# Filtro por eixo do curso
-eixos = ['Todos'] + list(df['Qual o eixo do seu curso?'].dropna().unique())
-eixo_selecionado = st.sidebar.selectbox("Eixo do Curso", eixos)
+col_a, col_b = st.columns(2)
 
-# Filtro por semestre
-semestres = ['Todos'] + list(df['Qual semestre se encontra?'].dropna().unique())
-semestre_selecionado = st.sidebar.selectbox("Semestre", semestres)
+# Gráfico de pizza - Eixo do curso
+contagem_eixos = df['Qual o eixo do seu curso?'].dropna().value_counts()
+fig_eixos_header = px.pie(
+    names=contagem_eixos.index,
+    values=contagem_eixos.values,
+    color_discrete_sequence=px.colors.qualitative.Set3,
+    title="Eixo do Curso"
+)
+fig_eixos_header.update_layout(margin=dict(t=40, b=10, l=10, r=10))
+with col_a:
+    st.plotly_chart(fig_eixos_header, use_container_width=True)
+    # controle auxiliar (sincroniza o filtro com o gráfico)
+    eixos_options = ['Todos'] + list(contagem_eixos.index)
+    eixo_selecionado = st.selectbox("Filtrar por Eixo", eixos_options, index=0)
+
+# Gráfico de pizza - Semestre
+contagem_semestres = df['Qual semestre se encontra?'].dropna().value_counts()
+fig_sem_header = px.pie(
+    names=contagem_semestres.index,
+    values=contagem_semestres.values,
+    color_discrete_sequence=px.colors.qualitative.Pastel,
+    title="Semestre"
+)
+
+fig_sem_header.update_layout(margin=dict(t=40, b=10, l=10, r=10))
+with col_b:
+    st.plotly_chart(fig_sem_header, use_container_width=True)
+    semestres_options = ['Todos'] + list(contagem_semestres.index)
+    semestre_selecionado = st.selectbox("Filtrar por Semestre", semestres_options, index=0)
 
 # Aplicar filtros
 df_filtrado = df.copy()
