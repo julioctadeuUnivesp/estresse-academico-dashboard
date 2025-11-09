@@ -132,18 +132,8 @@ st.plotly_chart(fig, use_container_width=True)
 projeto-estresse-academico/
 │
 ├── data/
-│   ├── dados_estresse_academico.csv
-│   └── raw/
-│
-├── notebooks/
-│   ├── 01_analise_exploratoria.ipynb
-│   ├── 02_preprocessamento.ipynb
-│   └── 03_analise_estatistica.ipynb
-│
-├── src/
-│   ├── data_processing.py
-│   ├── visualization.py
-│   └── utils.py
+│   ├── academic-stress-level.csv
+│   └── estresse_academico_univesp.csv
 │
 ├── dashboard.py
 ├── requirements.txt
