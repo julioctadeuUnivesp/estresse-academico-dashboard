@@ -414,76 +414,70 @@ def main():
 
     with tab2:
         
-        col5, col6 = st.columns(2)
+        col5 = st.columns(1)[0]  # ocupa toda a largura disponível
 
         with col5:
             st.markdown("**Vícios vs. Nível de Estresse (separado por tipo de vício)**")
             
             df_vicios = pd.DataFrame()
+            color_map = {}  # inicializar para uso posterior em col6
             
             if not df_filtrado.empty:
                 col_estresse = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
                 col_vicio = 'Marque abaixo até 3 vícios que tem.'
+            
+                # Preparar dataframe separando múltiplas opções em linhas individuais
+                df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
+                df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
                 
-            # Preparar dataframe separando múltiplas opções em linhas individuais
-            df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
-            df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
+                # Remover parênteses e o conteúdo entre eles (ex: "Café (muito)" -> "Café")
+                df_vicios[col_vicio] = df_vicios[col_vicio].str.replace(r'\s*\([^)]*\)', '', regex=True)
+                
+                # Dividir por ';' e explodir
+                df_vicios[col_vicio] = df_vicios[col_vicio].str.split(r'\s*;\s*')
+                df_vicios = df_vicios.explode(col_vicio)
+                
+                # Limpeza básica dos valores
+                df_vicios[col_vicio] = df_vicios[col_vicio].str.strip()
+                df_vicios = df_vicios[df_vicios[col_vicio] != '']
+                df_vicios = df_vicios[~df_vicios[col_vicio].str.lower().isin(['não informado', 'nao informado'])]
             
-            # Dividir por ';' e explodir
-            df_vicios[col_vicio] = df_vicios[col_vicio].str.split(r'\s*;\s*')
-            df_vicios = df_vicios.explode(col_vicio)
-            
-            # Limpeza básica dos valores
-            df_vicios[col_vicio] = df_vicios[col_vicio].str.strip()
-            df_vicios = df_vicios[df_vicios[col_vicio] != '']
-            df_vicios = df_vicios[df_vicios[col_vicio].str.lower() != 'não informado']
-            
-            if df_vicios.empty:
-                st.warning("Não há dados suficientes para gerar o gráfico.")
-            else:
-                # Opcional: ordenar categorias pelo número de ocorrências
-                ordem = df_vicios[col_vicio].value_counts().index.tolist()
-            
-            # Criar mapa de cores consistente para cada categoria
-            colors = px.colors.qualitative.Plotly
-            color_cycle = cycle(colors)
-            color_map = {cat: next(color_cycle) for cat in ordem}
-            
-            fig_box = px.box(
-            df_vicios,
-            x=col_vicio,
-            y=col_estresse,
-            color=col_vicio,
-            category_orders={col_vicio: ordem},
-            color_discrete_map=color_map,
-            title='Distribuição do Nível de Estresse por Tipo de Vício',
-            height=500
-            )
-            
-            fig_box.update_layout(
-            xaxis_title="Tipo de Vício",
-            yaxis_title="Nível de Estresse (1-5)",
-            showlegend=False,
-            xaxis_tickangle=-45
-            )
-            
-            st.plotly_chart(fig_box, use_container_width=True)
-
-        with col6:
-            st.markdown("**Legenda - Tipos de Vício**")
-            if df_vicios.empty:
-                st.info("Sem dados para legenda.")
-            else:
-                # Exibir legenda manualmente com os mesmos mapeamentos de cor
-                for label, color in color_map.items():
-                    st.markdown(
-                    f"<div style='display:flex;align-items:center;margin-bottom:6px;'>"
-                    f"<div style='width:16px;height:16px;background:{color};margin-right:8px;border-radius:3px;border:1px solid #ccc'></div>"
-                    f"<div>{label}</div></div>",
-                    unsafe_allow_html=True
+                if df_vicios.empty:
+                    st.warning("Não há dados suficientes para gerar o gráfico.")
+                    
+                else:
+                    # Ordenar categorias pelo número de ocorrências
+                    ordem = df_vicios[col_vicio].value_counts().index.tolist()
+                    
+                    # Criar mapa de cores consistente para cada categoria
+                    colors = px.colors.qualitative.Plotly
+                    color_cycle = cycle(colors)
+                    color_map = {cat: next(color_cycle) for cat in ordem}
+                    
+                    fig_box = px.box(
+                    df_vicios,
+                    x=col_vicio,
+                    y=col_estresse,
+                    color=col_vicio,
+                    category_orders={col_vicio: ordem},
+                    color_discrete_map=color_map,
+                    title='Distribuição do Nível de Estresse por Tipo de Vício',
+                    height=500
                     )
+                    
+                    fig_box.update_layout(
+                    xaxis_title = "Tipo de Vício",
+                    yaxis_title = "Nível de Estresse (1-5)",
+                    showlegend = False,
+                    xaxis_tickangle=-45
+                    )
+                    
+                    st.plotly_chart(fig_box, use_container_width=True)
+                
+            else:
+                st.warning("Não há dados filtrados para analisar vícios.")
 
-           
+
     with tab3:
         pass
         
