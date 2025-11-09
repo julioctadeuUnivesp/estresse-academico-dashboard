@@ -14,6 +14,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 import warnings
+from itertools import cycle
 warnings.filterwarnings('ignore')
 
 # Download necessário para o NLTK
@@ -418,60 +419,73 @@ def main():
         with col5:
             st.markdown("**Vícios vs. Nível de Estresse (separado por tipo de vício)**")
             
+            df_vicios = pd.DataFrame()
             if not df_filtrado.empty:
                 col_estresse = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
                 col_vicio = 'Marque abaixo até 3 vícios que tem.'
-                
-                # Preparar dataframe separando múltiplas opções em linhas individuais
-                df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
-                df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
-                
-                # Dividir por separadores comuns (vírgula, ponto-e-vírgula, barra) e explodir
-                df_vicios[col_vicio] = df_vicios[col_vicio].str.split(r'\s*[,;/]\s*')
-                df_vicios = df_vicios.explode(col_vicio)
-                
-                # Limpeza básica dos valores
-                df_vicios[col_vicio] = df_vicios[col_vicio].str.strip()
-                df_vicios = df_vicios[df_vicios[col_vicio] != '']
-                df_vicios = df_vicios[df_vicios[col_vicio].str.lower() != 'não informado']
-                
-                if df_vicios.empty:
-                    st.warning("Não há dados suficientes para gerar o gráfico.")
-                else:
-                    # Opcional: ordenar categorias pelo número de ocorrências
-                    ordem = df_vicios[col_vicio].value_counts().index.tolist()
-                    
-                    fig_box = px.box(
-                        df_vicios,
-                        x=col_vicio,
-                        y=col_estresse,
-                        color=col_vicio,
-                        category_orders={col_vicio: ordem},
-                        title='Distribuição do Nível de Estresse por Tipo de Vício',
-                        height=500
-                    )
-                    
-                    fig_box.update_layout(
-                        xaxis_title="Tipo de Vício",
-                        yaxis_title="Nível de Estresse (1-5)",
-                        showlegend=False,
-                        xaxis_tickangle=-45
-                    )
-                    
-                    st.plotly_chart(fig_box, use_container_width=True)
-            else:
+            
+            # Preparar dataframe separando múltiplas opções em linhas individuais
+            df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
+            df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
+            
+            # Dividir por separadores comuns (vírgula, ponto-e-vírgula, barra) e explodir
+            df_vicios[col_vicio] = df_vicios[col_vicio].str.split(r'\s*[,;/]\s*')
+            df_vicios = df_vicios.explode(col_vicio)
+            
+            # Limpeza básica dos valores
+            df_vicios[col_vicio] = df_vicios[col_vicio].str.strip()
+            df_vicios = df_vicios[df_vicios[col_vicio] != '']
+            df_vicios = df_vicios[df_vicios[col_vicio].str.lower() != 'não informado']
+            
+            if df_vicios.empty:
                 st.warning("Não há dados suficientes para gerar o gráfico.")
+            else:
+                # Opcional: ordenar categorias pelo número de ocorrências
+                ordem = df_vicios[col_vicio].value_counts().index.tolist()
+                
+            # Criar mapa de cores consistente para cada categoria
+            colors = px.colors.qualitative.Plotly
+            color_cycle = cycle(colors)
+            color_map = {cat: next(color_cycle) for cat in ordem}
+            
+            fig_box = px.box(
+                df_vicios,
+                x=col_vicio,
+                y=col_estresse,
+                color=col_vicio,
+                category_orders={col_vicio: ordem},
+                color_discrete_map=color_map,
+                title='Distribuição do Nível de Estresse por Tipo de Vício',
+                height=500
+            )
+            
+            fig_box.update_layout(
+                xaxis_title="Tipo de Vício",
+                yaxis_title="Nível de Estresse (1-5)",
+                showlegend=False,
+                xaxis_tickangle=-45
+            )
+            
+            st.plotly_chart(fig_box, use_container_width=True)
 
         with col6:
-            pass
+            st.markdown("**Legenda - Tipos de Vício**")
+            if df_vicios.empty:
+                st.info("Sem dados para legenda.")
+            else:
+                # Exibir legenda manualmente com os mesmos mapeamentos de cor
+                for label, color in color_map.items():
+                    st.markdown(
+                    f"<div style='display:flex;align-items:center;margin-bottom:6px;'>"
+                    f"<div style='width:16px;height:16px;background:{color};margin-right:8px;border-radius:3px;border:1px solid #ccc'></div>"
+                    f"<div>{label}</div></div>",
+                    unsafe_allow_html=True
+                    )
+        
     
     with tab3:
         pass
-       
-
-    
-
-    
+        
 
     
     # Quarta linha - Análise de fatores de estresse
