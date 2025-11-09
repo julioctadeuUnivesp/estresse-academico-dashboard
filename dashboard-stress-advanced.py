@@ -365,65 +365,112 @@ def main():
 
 
     # Terceira linha - Nuvens de palavras
-    st.subheader("☁️ Nuvens de Palavras - Análise Textual")
+    st.subheader("Análise Textual")
     
-    col1, col2 = st.columns(2)
-    col3, col4 = st.columns(2)
-    col5, col6 = st.columns(2)
     
-    with col1:
-        st.markdown("**Caracteristicas do Trabalho**")
-        textos_dificuldades_trabalho = df_filtrado['Marque até 4 características se aplicam ao seu trabalho']
-        fig_wc2 = create_wordcloud(textos_dificuldades_trabalho, "Realidade de Trabalho")
-        if fig_wc2:
-            st.pyplot(fig_wc2)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")
+    tab1, tab2, tab3 = st.tabs(["☁️ Nuvens de Palavras", "Análise Estatística", "Exportar Dados"])
+    
+    with tab1:
+        col1, col2 = st.columns(2)
+        col3, col4 = st.columns(2)
 
-    with col2:
-        st.markdown("**Caracteristicas do Lar**")
-        textos_dificuldades_trabalho = df_filtrado['Marque até 4  características que se aplicam a sua casa.']
-        fig_wc2 = create_wordcloud(textos_dificuldades_trabalho, "Caracteristicas do Lar")
-        if fig_wc2:
-            st.pyplot(fig_wc2)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")
+        with col1:
+            st.markdown("**Caracteristicas do Trabalho**")
+            textos_dificuldades_trabalho = df_filtrado['Marque até 4 características se aplicam ao seu trabalho']
+            fig_wc2 = create_wordcloud(textos_dificuldades_trabalho, "Realidade de Trabalho")
+            if fig_wc2:
+                st.pyplot(fig_wc2)
+            else:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+
+        with col2:
+            st.markdown("**Caracteristicas do Lar**")
+            textos_dificuldades_trabalho = df_filtrado['Marque até 4  características que se aplicam a sua casa.']
+            fig_wc2 = create_wordcloud(textos_dificuldades_trabalho, "Caracteristicas do Lar")
+            if fig_wc2:
+                st.pyplot(fig_wc2)
+            else:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+                
+        with col3:
+            st.markdown("**Sentimentos no Período de Provas**")
+            textos_sentimentos = df_filtrado['Resuma em uma palavra como se sente no período de provas.']
+            fig_wc3 = create_wordcloud(textos_sentimentos, "Sentimentos nas Provas")
+            if fig_wc3:
+                st.pyplot(fig_wc3)
+            else:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+        
+        with col4:
+            st.markdown("**Dificuldades em Trabalhos em Grupo**")
+            textos_dificuldades = df_filtrado['Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?']
+            fig_wc4 = create_wordcloud(textos_dificuldades, "Dificuldades em Grupo")
+            if fig_wc4:
+                st.pyplot(fig_wc4)
+            else:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+    
+
+    with tab2:
+        
+        col5, col6 = st.columns(2)
+
+        with col5:
+            st.markdown("**Vícios vs. Nível de Estresse (separado por tipo de vício)**")
             
-    with col3:
-        st.markdown("**Sentimentos no Período de Provas**")
-        textos_sentimentos = df_filtrado['Resuma em uma palavra como se sente no período de provas.']
-        fig_wc3 = create_wordcloud(textos_sentimentos, "Sentimentos nas Provas")
-        if fig_wc3:
-            st.pyplot(fig_wc3)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")
+            if not df_filtrado.empty:
+                col_estresse = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
+                col_vicio = 'Marque abaixo até 3 vícios que tem.'
+                
+                # Preparar dataframe separando múltiplas opções em linhas individuais
+                df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
+                df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
+                
+                # Dividir por separadores comuns (vírgula, ponto-e-vírgula, barra) e explodir
+                df_vicios[col_vicio] = df_vicios[col_vicio].str.split(r'\s*[,;/]\s*')
+                df_vicios = df_vicios.explode(col_vicio)
+                
+                # Limpeza básica dos valores
+                df_vicios[col_vicio] = df_vicios[col_vicio].str.strip()
+                df_vicios = df_vicios[df_vicios[col_vicio] != '']
+                df_vicios = df_vicios[df_vicios[col_vicio].str.lower() != 'não informado']
+                
+                if df_vicios.empty:
+                    st.warning("Não há dados suficientes para gerar o gráfico.")
+                else:
+                    # Opcional: ordenar categorias pelo número de ocorrências
+                    ordem = df_vicios[col_vicio].value_counts().index.tolist()
+                    
+                    fig_box = px.box(
+                        df_vicios,
+                        x=col_vicio,
+                        y=col_estresse,
+                        color=col_vicio,
+                        category_orders={col_vicio: ordem},
+                        title='Distribuição do Nível de Estresse por Tipo de Vício',
+                        height=500
+                    )
+                    
+                    fig_box.update_layout(
+                        xaxis_title="Tipo de Vício",
+                        yaxis_title="Nível de Estresse (1-5)",
+                        showlegend=False,
+                        xaxis_tickangle=-45
+                    )
+                    
+                    st.plotly_chart(fig_box, use_container_width=True)
+            else:
+                st.warning("Não há dados suficientes para gerar o gráfico.")
+
+        with col6:
+            pass
     
-    with col4:
-        st.markdown("**Dificuldades em Trabalhos em Grupo**")
-        textos_dificuldades = df_filtrado['Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?']
-        fig_wc4 = create_wordcloud(textos_dificuldades, "Dificuldades em Grupo")
-        if fig_wc4:
-            st.pyplot(fig_wc4)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")   
+    with tab3:
+        pass
+       
 
-    with col5:
-        st.markdown("**Vicios**")
-        textos_dificuldades = df_filtrado['Marque abaixo até 3 vícios que tem.']
-        fig_wc4 = create_wordcloud(textos_dificuldades, "Vicios")
-        if fig_wc4:
-            st.pyplot(fig_wc4)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")    
+    
 
-    with col6:
-        st.markdown("**Habitos**")
-        textos_dificuldades = df_filtrado['Marque abaixo até 3 hábitos que tem.']
-        fig_wc4 = create_wordcloud(textos_dificuldades, "Habitos")
-        if fig_wc4:
-            st.pyplot(fig_wc4)
-        else:
-            st.info("Não há dados textuais para gerar a nuvem de palavras.")
     
 
     
@@ -525,8 +572,8 @@ def main():
     st.subheader("🔍 Análise Detalhada dos Sentimentos")
     
     # Tabela com exemplos de sentimentos
-    col1, col2 = st.columns([2, 1])
     
+    col1, col2 = st.columns([2, 1])
     with col1:
         st.markdown("**Exemplos de Respostas por Sentimento**")
         
@@ -550,7 +597,9 @@ def main():
         }).round(2)
         
         st.dataframe(stats_sentimento)
-    
+
+
+
     # Seção de dados brutos com análise
     st.markdown("---")
     st.subheader("📋 Dados Detalhados e Exportação")
