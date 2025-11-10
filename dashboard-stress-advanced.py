@@ -137,33 +137,33 @@ def padronizar_residencia(resposta):
     'So': 'Sozinho(a)',
     'Moro': 'Sozinho(a)',
     'só': 'Sozinho(a)',
-    'Divido com esposo': 'Divide com família/conjuge',
-    'Moro com esposo': 'Divide com família/conjuge',
-    'com meu esposo': 'Divide com família/conjuge',
-    'Meu marido e eu.': 'Divide com família/conjuge',
-    'Moro com meu esposo': 'Divide com família/conjuge',
-    'Divido com a minha família': 'Divide com família/conjuge',
-    'Moro com a minha família': 'Divide com família/conjuge',
-    'Família': 'Divide com família/conjuge',
-    'Moro com pais idosos': 'Divide com família/conjuge',
-    'casada e com 1 filho': 'Divide com família/conjuge',
-    'Eu e filha.': 'Divide com família/conjuge',
-    'Com minha mãe': 'Divide com família/conjuge',
-    'Moro com marido e 2 filhos': 'Divide com família/conjuge',
-    'Moro com parentes': 'Divide com família/conjuge',
-    'Divido com minha noiva': 'Divide com família/conjuge',
-    'Divido a casa com esposa e um filho.': 'Divide com família/conjuge',
-    'divido com familiares.': 'Divide com família/conjuge',
-    'Divido': 'Divide com outras pessoas',
-    'Divido.': 'Divide com outras pessoas',
-    'Divido ': 'Divide com outras pessoas',
-    'Divido a casa com 6 pessoas': 'Divide com outras pessoas',
-    'Divido quintal com minha mãe e irmã': 'Divide com outras pessoas',
-    'Divido a casa.': 'Divide com outras pessoas',
-    'Divide residência': 'Divide com outras pessoas',
-    'Divide': 'Divide com outras pessoas',
-    '5': 'Divide com outras pessoas',
-    '4': 'Divide com outras pessoas'}
+    'Divido com esposo': 'Família/Conjuge',
+    'Moro com esposo': 'Família/Conjuge',
+    'com meu esposo': 'Família/Conjuge',
+    'Meu marido e eu.': 'Família/Conjuge',
+    'Moro com meu esposo': 'Família/Conjuge',
+    'Divido com a minha família': 'Família/Conjuge',
+    'Moro com a minha família': 'Família/Conjuge',
+    'Família': 'Família/Conjuge',
+    'Moro com pais idosos': 'Família/Conjuge',
+    'casada e com 1 filho': 'Família/Conjuge',
+    'Eu e filha.': 'Família/Conjuge',
+    'Com minha mãe': 'Família/Conjuge',
+    'Moro com marido e 2 filhos': 'Família/Conjuge',
+    'Moro com parentes': 'Família/Conjuge',
+    'Divido com minha noiva': 'Família/Conjuge',
+    'Divido a casa com esposa e um filho.': 'Família/Conjuge',
+    'divido com familiares.': 'Família/Conjuge',
+    'Divido': 'Outras pessoas',
+    'Divido.': 'Outras pessoas',
+    'Divido ': 'Outras pessoas',
+    'Divido a casa com 6 pessoas': 'Outras pessoas',
+    'Divido quintal com minha mãe e irmã': 'Outras pessoas',
+    'Divido a casa.': 'Outras pessoas',
+    'Divide residência': 'Outras pessoas',
+    'Divide': 'Outras pessoas',
+    '5': 'Outras pessoas',
+    '4': 'Outras pessoas'}
 
     resposta = str(resposta).strip()
     
@@ -173,9 +173,9 @@ def padronizar_residencia(resposta):
     
     # Regras gerais
     if any(termo in resposta.lower() for termo in ['esposo', 'marido', 'filho', 'filha', 'família', 'mãe', 'pai', 'noiva']):
-        return 'Divide com família/conjuge'
+        return 'Família/Conjuge'
     elif any(termo in resposta.lower() for termo in ['divido', 'divide', 'compartilha']):
-        return 'Divide com outras pessoas'
+        return 'Outras pessoas'
     elif any(termo in resposta.lower() for termo in ['só', 'so', 'sozinho', 'moro so']):
         return 'Sozinho(a)'
     else:
@@ -812,8 +812,13 @@ def main():
                 color_continuous_scale='viridis',
                 title='Média de Estresse por Estratégia de Enfrentamento'
             )
-            
-            fig_barras.update_layout(xaxis_tickangle=-45)
+
+            fig_barras.update_layout(
+                xaxis_title="Estratégia de Enfrentamento",
+                yaxis_title="Média Estresse",
+                xaxis_tickangle=-45
+            )
+
             st.plotly_chart(fig_barras, use_container_width=True)
     
 
