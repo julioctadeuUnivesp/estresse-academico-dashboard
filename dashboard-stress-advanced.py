@@ -130,6 +130,59 @@ def analyze_sentiment_textblob(text):
         return 'neutro'
 
 
+def padronizar_residencia(resposta):
+    
+    mapeamento_residencias = {
+    'Só': 'Sozinho(a)',
+    'So': 'Sozinho(a)',
+    'Moro': 'Sozinho(a)',
+    'só': 'Sozinho(a)',
+    'Divido com esposo': 'Divide com família/conjuge',
+    'Moro com esposo': 'Divide com família/conjuge',
+    'com meu esposo': 'Divide com família/conjuge',
+    'Meu marido e eu.': 'Divide com família/conjuge',
+    'Moro com meu esposo': 'Divide com família/conjuge',
+    'Divido com a minha família': 'Divide com família/conjuge',
+    'Moro com a minha família': 'Divide com família/conjuge',
+    'Família': 'Divide com família/conjuge',
+    'Moro com pais idosos': 'Divide com família/conjuge',
+    'casada e com 1 filho': 'Divide com família/conjuge',
+    'Eu e filha.': 'Divide com família/conjuge',
+    'Com minha mãe': 'Divide com família/conjuge',
+    'Moro com marido e 2 filhos': 'Divide com família/conjuge',
+    'Moro com parentes': 'Divide com família/conjuge',
+    'Divido com minha noiva': 'Divide com família/conjuge',
+    'Divido a casa com esposa e um filho.': 'Divide com família/conjuge',
+    'divido com familiares.': 'Divide com família/conjuge',
+    'Divido': 'Divide com outras pessoas',
+    'Divido.': 'Divide com outras pessoas',
+    'Divido ': 'Divide com outras pessoas',
+    'Divido a casa com 6 pessoas': 'Divide com outras pessoas',
+    'Divido quintal com minha mãe e irmã': 'Divide com outras pessoas',
+    'Divido a casa.': 'Divide com outras pessoas',
+    'Divide residência': 'Divide com outras pessoas',
+    'Divide': 'Divide com outras pessoas',
+    '5': 'Divide com outras pessoas',
+    '4': 'Divide com outras pessoas'}
+
+    resposta = str(resposta).strip()
+    
+    # Verificar se está no mapeamento
+    if resposta in mapeamento_residencias:
+        return mapeamento_residencias[resposta]
+    
+    # Regras gerais
+    if any(termo in resposta.lower() for termo in ['esposo', 'marido', 'filho', 'filha', 'família', 'mãe', 'pai', 'noiva']):
+        return 'Divide com família/conjuge'
+    elif any(termo in resposta.lower() for termo in ['divido', 'divide', 'compartilha']):
+        return 'Divide com outras pessoas'
+    elif any(termo in resposta.lower() for termo in ['só', 'so', 'sozinho', 'moro so']):
+        return 'Sozinho(a)'
+    else:
+        return 'Outros'
+
+
+
 def create_plotpie(df, title):
     dataframe = df
     fig = px.pie(
@@ -219,15 +272,9 @@ def create_boxplot(df, x_col, y_col, title, color_map=None):
         height=500
     )
 
-    fig_box.update_layout(
-        xaxis_title=x_col,
-        yaxis_title=y_col,
-        showlegend=True,
-        xaxis_tickangle=-45,
-    )
     fig_box.update_xaxes(showticklabels=False)
 
-    st.plotly_chart(fig_box, use_container_width=True)
+    return fig_box
 
 
 def main():
@@ -422,26 +469,34 @@ def main():
     
 
     # Criar abas para diferentes visualizações
-    tabWork, tabHome = st.tabs([" 🏢 Trabalho", "🏠 Casa"])
+    tabWork, tabHome, stress = st.tabs([" 🏢 Trabalho", "🏠 Casa", "😰 Estresse em Período de Provas"])
 
     with tabWork:
         colCloudWork, colWorkModel = st.columns(2)
         colNivelWork = st.columns(1)[0]
 
         with colNivelWork:
-            create_boxplot(
-                df_filtrado,
-                'Marque até 4 características se aplicam ao seu trabalho', 
-                'Quanto sua rotina de trabalho interfere nos estudos?', 
-                'Interferência nos Estudos vs Características do Trabalho', 
-                {}
+            fig = create_boxplot(
+                        df_filtrado,
+                        'Marque até 4 características se aplicam ao seu trabalho', 
+                        'Quanto sua rotina de trabalho interfere nos estudos?', 
+                        'Interferência nos Estudos vs Características do Trabalho', 
+                        {}
+                    )
+            
+            fig.update_layout(
+                xaxis_title="Características do Trabalho",
+                yaxis_title="Interferência nos Estudos",
+                showlegend=True,
+                xaxis_tickangle=-45
             )
-        
-        df_filtrado['Qual o modelo de trabalho?']
+            
+            st.plotly_chart(fig, use_container_width=True)
+
 
         with colWorkModel:
             create_plotpie(
-                df['Qual o modelo de trabalho?'].value_counts(),
+                df_filtrado['Qual o modelo de trabalho?'].value_counts(),
                 "Modelo de trabalho")
 
 
@@ -458,20 +513,32 @@ def main():
 
     with tabHome:
 
-        colCloudHome, colHeatHome = st.columns(2)
+        colCloudHome, colPieHome = st.columns(2)
         colNivelHome = st.columns(1)[0]
 
         with colNivelHome:
-            create_boxplot(
+            fig = create_boxplot(
                 df_filtrado,
                 'Marque até 4  características que se aplicam a sua casa.', 
                 'Quanto sua rotina de casa interfere nos estudos?', 
                 'Interferência nos Estudos vs Características do Casa', 
                 {}
             )
-        
-        with colHeatHome:
-            pass
+
+            fig.update_layout(
+                xaxis_title="Características do Casa",
+                yaxis_title="Interferência nos Estudos",
+                showlegend=True,
+                xaxis_tickangle=-45
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with colPieHome:
+            create_plotpie(
+                df_filtrado['Atualmente mora só ou divide sua casa?'].apply(padronizar_residencia).value_counts(),
+                "Divide moradia"
+            )
 
         with colCloudHome:
             st.markdown("**Caracteristicas do Lar**")
@@ -481,49 +548,56 @@ def main():
                 create_wordcloud(textos_dificuldades_trabalho, "Caracteristicas do Lar")
             except:
                 st.info("Não há dados textuais para gerar a nuvem de palavras.")
-
-
-    # Criar abas para diferentes visualizações
-    provas, grupos = st.tabs(["📈 Provas", "🎯 Grupos"])
     
-    with provas:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Sentimentos no Período de Provas**")
-            textos_sentimentos = df_filtrado['Resuma em uma palavra como se sente no período de provas.']
-            try:
-                create_wordcloud(textos_sentimentos, "Sentimentos nas Provas")
-            except:
-                st.info("Não há dados textuais para gerar a nuvem de palavras.")
-        
-        with col2:
-            pass
+    with stress:
+        colStressHome = st.columns(1)[0]
+        colStressWork = st.columns(1)[0] 
 
+        with colStressHome:
+            fig = create_boxplot(
+                df_filtrado,
+                'Marque até 4 características se aplicam ao seu trabalho', 
+                'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?', 
+                'Estresse periodo de provas vs Características do Trabalho', 
+                {}
+            )
 
-    with grupos:
-        
-        col3, col4 = st.columns(2)
-        
-        with col3:
-            st.markdown("**Dificuldades em Trabalhos em Grupo**")
-            textos_dificuldades = df_filtrado['Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?']
+            fig.update_layout(
+                xaxis_title="Características do Trabalho",
+                yaxis_title="Estresse em Período de Provas",
+                showlegend=True,
+                xaxis_tickangle=-45
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        with colStressWork:
+            fig = create_boxplot(
+                df_filtrado,
+                'Marque até 4  características que se aplicam a sua casa.', 
+                'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?', 
+                'Estresse periodo de provas vs Características do Casa', 
+                {}
+            )
+
+            fig.update_layout(
+                xaxis_title="Características do Casa",
+                yaxis_title="Estresse em Período de Provas",
+                showlegend=True,
+                xaxis_tickangle=-45
+            )
             
-            try:
-                create_wordcloud(textos_dificuldades, "Dificuldades em Grupo")
-            except:
-                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+            st.plotly_chart(fig, use_container_width=True)
 
-        with col4:
-            pass
+
+
 
 
     # Terceira linha - Nuvens de palavras
     st.subheader("Análise Textual")
-    
-    
-    tab1, tab2, tab3 = st.tabs(["☁️ Nuvens de Palavras", "Análise Estatística", "Exportar Dados"])
-    
+
+    tab1, habitos, vicios = st.tabs(["☁️ Nuvens de Palavras", "Habitos", "Vicios"])
+
     with tab1:
         col1, col2 = st.columns(2)
         col3, col4 = st.columns(2)
@@ -541,19 +615,77 @@ def main():
             pass
     
 
-    with tab2:
+    with habitos:
         
         col5 = st.columns(1)[0]
         col6 = st.columns(1)[0]
 
         with col5:
-            pass        
+            st.markdown("**Nível de Estresse vs Hábitos**")
+            
+            df_habitos = pd.DataFrame()
+            color_map = {}  # inicializar para uso posterior em col8
+            
+            if not df_filtrado.empty:
+                col_estresse = 'Quanto esse(es) hábito(os) ajuda(am) com seu stress nos estudos?'
+                col_habito = 'Marque abaixo até 3 hábitos que tem.'
+            
+                # Preparar dataframe separando múltiplas opções em linhas individuais
+                df_habitos = df_filtrado[[col_estresse, col_habito]].copy()
+                df_habitos[col_habito] = df_habitos[col_habito].fillna('').astype(str)
+                
+                # Remover parênteses e o conteúdo entre eles (ex: "Café (muito)" -> "Café")
+                df_habitos[col_habito] = df_habitos[col_habito].str.replace(r'\s*\([^)]*\)', '', regex=True)
+                
+                # Dividir por ';' e explodir
+                df_habitos[col_habito] = df_habitos[col_habito].str.split(r'\s*;\s*')
+                df_habitos = df_habitos.explode(col_habito)
+                
+                # Limpeza básica dos valores
+                df_habitos[col_habito] = df_habitos[col_habito].str.strip()
+                df_habitos = df_habitos[df_habitos[col_habito] != '']
+                df_habitos = df_habitos[~df_habitos[col_habito].str.lower().isin(['não informado', 'nao informado'])]
+            
+                if df_habitos.empty:
+                    st.warning("Não há dados suficientes para gerar o gráfico.")
+                    
+                else:
+                    # Ordenar categorias pelo número de ocorrências
+                    ordem = df_habitos[col_habito].value_counts().index.tolist()
+                    
+                    # Criar mapa de cores consistente para cada categoria
+                    colors = px.colors.qualitative.Plotly
+                    color_cycle = cycle(colors)
+                    color_map = {cat: next(color_cycle) for cat in ordem}
+
+                    fig_box = create_boxplot(
+                        df_habitos,
+                        col_habito,
+                        col_estresse,
+                        'Estresse em Período de Provas x Habito',
+                        color_map
+                    )
+                    
+                    fig_box.update_layout(
+                        xaxis_title = "Tipo de Habito",
+                        yaxis_title = "Estresse em Período de Provas",
+                        showlegend = True,
+                        xaxis_tickangle=-45,
+                    )
+                    
+                    fig_box.update_xaxes(showticklabels=False)
+                    
+                    st.plotly_chart(fig_box, use_container_width=True)
+                
+            else:
+                st.warning("Não há dados filtrados para analisar hábitos.")
+
         
         with col6:
             pass
 
 
-    with tab3:
+    with vicios:
                 
         col7 = st.columns(1)[0]
         col8 = st.columns(1)[0]
@@ -603,13 +735,13 @@ def main():
                     color=col_vicio,
                     category_orders={col_vicio: ordem},
                     color_discrete_map=color_map,
-                    title='Nível de Estresse x Vício',
+                    title='Estresse em Período de Provas x Vício',
                     height=500
                     )
                     
                     fig_box.update_layout(
                     xaxis_title = "Tipo de Vício",
-                    yaxis_title = "Nível de Estresse",
+                    yaxis_title = "Estresse em Período de Provas",
                     showlegend = True,
                     xaxis_tickangle=-45,
                     )
@@ -622,135 +754,40 @@ def main():
                 st.warning("Não há dados filtrados para analisar vícios.")        
         
         with col8:
-            st.markdown("**Nível de Estresse vs Hábitos**")
-            
-            df_habitos = pd.DataFrame()
-            color_map = {}  # inicializar para uso posterior em col8
-            
-            if not df_filtrado.empty:
-                col_estresse = 'Quanto esse(es) hábito(os) ajuda(am) com seu stress nos estudos?'
-                col_habito = 'Marque abaixo até 3 hábitos que tem.'
-            
-                # Preparar dataframe separando múltiplas opções em linhas individuais
-                df_habitos = df_filtrado[[col_estresse, col_habito]].copy()
-                df_habitos[col_habito] = df_habitos[col_habito].fillna('').astype(str)
-                
-                # Remover parênteses e o conteúdo entre eles (ex: "Café (muito)" -> "Café")
-                df_habitos[col_habito] = df_habitos[col_habito].str.replace(r'\s*\([^)]*\)', '', regex=True)
-                
-                # Dividir por ';' e explodir
-                df_habitos[col_habito] = df_habitos[col_habito].str.split(r'\s*;\s*')
-                df_habitos = df_habitos.explode(col_habito)
-                
-                # Limpeza básica dos valores
-                df_habitos[col_habito] = df_habitos[col_habito].str.strip()
-                df_habitos = df_habitos[df_habitos[col_habito] != '']
-                df_habitos = df_habitos[~df_habitos[col_habito].str.lower().isin(['não informado', 'nao informado'])]
-            
-                if df_habitos.empty:
-                    st.warning("Não há dados suficientes para gerar o gráfico.")
-                    
-                else:
-                    # Ordenar categorias pelo número de ocorrências
-                    ordem = df_habitos[col_habito].value_counts().index.tolist()
-                    
-                    # Criar mapa de cores consistente para cada categoria
-                    colors = px.colors.qualitative.Plotly
-                    color_cycle = cycle(colors)
-                    color_map = {cat: next(color_cycle) for cat in ordem}
-                    
-                    fig_box = px.box(
-                    df_habitos,
-                    x=col_habito,
-                    y=col_estresse,
-                    color=col_habito,
-                    category_orders={col_habito: ordem},
-                    color_discrete_map=color_map,
-                    title='Nível de Estresse x Habito',
-                    height=500
-                    )
-                    
-                    fig_box.update_layout(
-                    xaxis_title = "Tipo de Habito",
-                    yaxis_title = "Nível de Estresse",
-                    showlegend = True,
-                    xaxis_tickangle=-45,
-                    )
-                    
-                    fig_box.update_xaxes(showticklabels=False)
-                    
-                    st.plotly_chart(fig_box, use_container_width=True)
-                
-            else:
-                st.warning("Não há dados filtrados para analisar vícios.")
+            pass
 
 
-
-    
     # Quarta linha - Análise de fatores de estresse
     st.subheader("📊 Fatores de Estresse e Enfrentamento")
     
     # Criar abas para diferentes visualizações
-    tab1, tab2, tab3 = st.tabs(["📈 Interferências", "🎯 Estratégias vs Estresse", "📋 Estatísticas"])
+    tab1, tab2 = st.tabs(["🎯 Estratégias vs Estresse", "📋 Estatísticas"])
     
     with tab1:
-        st.markdown("**Interferências nas Rotinas**")
-        
-        interferencias_data = {
-            'Trabalho': df_filtrado['Quanto sua rotina de trabalho interfere nos estudos?'].value_counts().sort_index(),
-            'Casa': df_filtrado['Quanto sua rotina de casa interfere nos estudos?'].value_counts().sort_index()
-        }
-        
-        fig_interf = go.Figure()
-        
-        fig_interf.add_trace(go.Bar(
-            name='Interferência do Trabalho',
-            x=list(interferencias_data['Trabalho'].index),
-            y=interferencias_data['Trabalho'].values,
-            marker_color='#3498db'
-        ))
-        
-        fig_interf.add_trace(go.Bar(
-            name='Interferência da Casa',
-            x=list(interferencias_data['Casa'].index),
-            y=interferencias_data['Casa'].values,
-            marker_color='#9b59b6'
-        ))
-        
-        fig_interf.update_layout(
-            barmode='group',
-            xaxis_title="Nível de Interferência (1-5)",
-            yaxis_title="Quantidade de Alunos"
-        )
-        
-        st.plotly_chart(fig_interf, use_container_width=True)
-    
-    with tab2:
         st.markdown("**Estratégias de Enfrentamento vs. Nível de Estresse**")
         
         if not df_filtrado.empty:
             # Boxplot principal
-            fig_box = px.box(
+            fig = create_boxplot(
                 df_filtrado,
-                x='Qual estratégia de enfrentamento você usa como estudante?',
-                y='Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?',
-                color='Qual estratégia de enfrentamento você usa como estudante?',
-                title='Distribuição do Nível de Estresse por Estratégia',
-                height=500
-            )
+                'Qual estratégia de enfrentamento você usa como estudante?',
+                'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?',
+                'Distribuição do Nível de Estresse por Estratégia',
+                {})
             
-            fig_box.update_layout(
+            fig.update_layout(
                 xaxis_title="Estratégia de Enfrentamento",
-                yaxis_title="Nível de Estresse (1-5)",
-                showlegend=False,
+                yaxis_title="Estresse em Período de Provas",
+                showlegend=True,
                 xaxis_tickangle=-45
             )
             
-            st.plotly_chart(fig_box, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
+
         else:
             st.warning("Não há dados suficientes para gerar o gráfico.")
     
-    with tab3:
+    with tab2:
         st.markdown("**Estatísticas Detalhadas por Estratégia**")
         
         if not df_filtrado.empty:
@@ -810,6 +847,42 @@ def main():
         }).round(2)
         
         st.dataframe(stats_sentimento)
+
+
+    # Criar abas para diferentes visualizações
+    provas, grupos = st.tabs(["📈 Provas", "🎯 Grupos"])
+    
+    with provas:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Sentimentos no Período de Provas**")
+            textos_sentimentos = df_filtrado['Resuma em uma palavra como se sente no período de provas.']
+            try:
+                create_wordcloud(textos_sentimentos, "Sentimentos nas Provas")
+            except:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+        
+        with col2:
+            pass
+
+
+    with grupos:
+        
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            st.markdown("**Dificuldades em Trabalhos em Grupo**")
+            textos_dificuldades = df_filtrado['Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?']
+            
+            try:
+                create_wordcloud(textos_dificuldades, "Dificuldades em Grupo")
+            except:
+                st.info("Não há dados textuais para gerar a nuvem de palavras.")
+
+        with col4:
+            pass
+
 
 
 
