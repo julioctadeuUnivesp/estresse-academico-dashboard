@@ -1,9 +1,14 @@
-# Dashboard de Análise de Estresse Acadêmico
+# 📊 Dashboard para Análise de Estresse Acadêmico
 
-Este repositório contém um dashboard desenvolvido em Python com Streamlit para análise de estresse acadêmico.
+Este projeto utiliza Python para análise e visualização de dados sobre estresse acadêmico em estudantes universitários e corpo discente da UNIVESP.
+
+## 📋 Sobre o Projeto
+
+Análise de fatores predisponentes ao estresse acadêmico em estudantes de graduação da UNIVESP, com base em dados coletados através de formulário estruturado.
+
 
 ## Funcionalidades
-- Coleta e limpeza de dados.
+- Coleta e padronização de dados.
 - Dashboard interativo com filtros e gráficos.
 - Visualizações: distribuições, boxplots e scatter plots.
 
@@ -26,6 +31,18 @@ projeto-estresse-academico/
 ```
 
 ## Tecnologias
+
+### Bibliotecas Python
+| Biblioteca | Versão | Finalidade |
+|------------|--------|------------|
+| **Pandas** | >=1.5.0 | Manipulação e análise de dados |
+| **Streamlit** | >=1.22.0 | Criação de dashboard interativo |
+| **Plotly** | >=5.13.0 | Visualizações interativas |
+| **NumPy** | >=1.23.0 | Operações numéricas |
+| **Matplotlib** | >=3.7.0 | Visualizações estáticas |
+
+### Descrição das Tecnologias Utilizadas
+
 - **Python 3.8+**: Linguagem principal utilizada para o desenvolvimento do projeto, incluindo o processamento de dados e a criação do dashboard.
     - Exemplo: Scripts como `dashboard.py` e `preprocess.py` foram escritos em Python para manipular os dados e gerar as visualizações.
 
