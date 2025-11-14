@@ -1,16 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import re
-from textblob import TextBlob
 import nltk
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 import warnings
-from itertools import cycle
 warnings.filterwarnings('ignore')
 
 # Download necessário para o NLTK
@@ -105,7 +102,7 @@ def load_data():
         'Academic pressure from your home': 'Pressão Familiar',
         'Study Environment': 'Ambiente de Estudo',
         'What coping strategy you use as a student?': 'Estratégia de Enfrentamento',
-        'Do you have any bad habits like smoking, drinking on a daily basis?': 'Hábitos Negativos',
+        'Do you have any bad habits like smoking, drinking on a daily basis?': 'Vícios',
         'What would you rate the academic  competition in your student life': 'Competição Acadêmica',
         'Rate your academic stress index': 'Índice de Estresse'
     }, inplace=True)
@@ -117,9 +114,9 @@ def load_data():
     df['Ambiente de Estudo'] = df['Ambiente de Estudo'].replace({
         'Noisy': 'Barulhento',
         'Peaceful': 'Pacífico',
-        'disrupted': 'Conturbado'
+        'disrupted': 'Intermitente'
     })
-    df['Hábitos Negativos'] = df['Hábitos Negativos'].replace({
+    df['Vícios'] = df['Vícios'].replace({
         'Yes': 'Sim',
         'No': 'Não',
         'prefer not to say': 'Prefiro não dizer'
@@ -280,15 +277,31 @@ def create_boxplot(df, x_col, y_col, title):
     fig_box.update_xaxes(showticklabels=True)
     return fig_box
 
-def create_bar_chart(df, x_col, y_col, title, color_col=None):
-    """Cria gráfico de barras"""
-    if color_col:
-        fig = px.bar(df, x=x_col, y=y_col, color=color_col, title=title, barmode='group')
-    else:
-        fig = px.bar(df, x=x_col, y=y_col, title=title)
-    
+
+def create_graphic_bars(df, x_col, y_col, title, color_col=None, x_label=None, y_label=None):
+    df_temp = df.copy()
+    fig = px.bar(
+        df_temp, 
+        x = df_temp[x_col].unique(),
+        y = df_temp[y_col].unique(), 
+        title = title,
+        orientation = 'v',
+        color = color_col,
+        color_continuous_scale='viridis'
+    )
+
+    fig.update_xaxes()
+
+    if y_label is not None:
+        fig.update_layout(yaxis_title=y_label)
+        
+    if x_label is not None:
+        fig.update_layout(xaxis_title=x_label)
+
     fig.update_layout(xaxis_tickangle=-45)
-    return fig
+
+    st.plotly_chart(fig, use_container_width=True)
+    
 
 # ============================================================================
 # COMPONENTES DE UI
@@ -332,8 +345,8 @@ def create_sidebar_filters(df):
         coping_selected = st.selectbox("Estratégia de Enfrentamento", coping_strategies)
         
         # Filtro por hábitos
-        habits = ['Todos'] + list(df['Hábitos Negativos'].dropna().unique())
-        habit_selected = st.selectbox("Hábitos", habits)
+        habits = ['Todos'] + list(df['Vícios'].dropna().unique())
+        habit_selected = st.selectbox("Vícios", habits)
     
     return {
         'study_env': study_env_selected,
@@ -362,7 +375,7 @@ def apply_filters(df, filters):
         df_filtrado = df_filtrado[df_filtrado['Estratégia de Enfrentamento'] == filters['coping']]
     
     if filters['habit'] != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Hábitos Negativos'] == filters['habit']]
+        df_filtrado = df_filtrado[df_filtrado['Vícios'] == filters['habit']]
     
     # Filtrar por faixas de valores
     df_filtrado = df_filtrado[
@@ -388,7 +401,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             total_participantes, 
             "Total de Participantes",
-            "Número total de respostas filtradas"
+            None
         )
     
     with col2:
@@ -396,7 +409,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_estresse:.1f}/5", 
             "Índice de Estresse Médio",
-            "Média do nível de estresse acadêmico"
+            None
         )
     
     with col3:
@@ -404,7 +417,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_pressao_colega:.1f}/5", 
             "Pressão dos Colegas",
-            "Média da pressão dos colegas"
+            None
         )
     
     with col4:
@@ -412,7 +425,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_pressao_familiar:.1f}/5", 
             "Pressão Familiar",
-            "Média da pressão familiar"
+            None
         )
     
     # Segunda linha de métricas
@@ -423,25 +436,25 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_competicao:.1f}/5", 
             "Competição Acadêmica",
-            "Média da competição acadêmica"
+            None
         )
         
     with col6:
-        count_bad_habits = len(df_filtrado[df_filtrado['Hábitos Negativos'] == 'Yes'])
+        count_bad_habits = len(df_filtrado[df_filtrado['Vícios'] == 'Sim'])
         perc_bad_habits = (count_bad_habits / len(df_filtrado)) * 100 if len(df_filtrado) > 0 else 0
         create_metric_card(
             f"{perc_bad_habits:.1f}%", 
-            "Com Hábitos Negativos",
-            "Porcentagem com hábitos negativos"
+            "Com Vícios",
+            None
         )
         
     with col7:
-        peaceful_env = len(df_filtrado[df_filtrado['Ambiente de Estudo'] == 'Peaceful'])
+        peaceful_env = len(df_filtrado[df_filtrado['Ambiente de Estudo'] == 'Pacífico'])
         perc_peaceful = (peaceful_env / len(df_filtrado)) * 100 if len(df_filtrado) > 0 else 0
         create_metric_card(
             f"{perc_peaceful:.1f}%", 
             "Ambiente Pacífico",
-            "Porcentagem com ambiente de estudo pacífico"
+            None
         )
         
     with col8:
@@ -450,25 +463,25 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{perc_high_stress:.1f}%", 
             "Alto Estresse",
-            "Porcentagem com alto nível de estresse"
+            None
         )
 
 def display_demographic_analysis(df_filtrado):
     """Exibe análise demográfica"""
     create_section_header("👥 Análise Demográfica")
     
-    col2, col3 = st.columns(2)
-    
-    with col2:
+    col1, col2 = st.columns(2)
+
+    with col1:
         create_plotpie(
             df_filtrado['Ambiente de Estudo'].value_counts(),
             "Distribuição por Ambiente de Estudo"
         )
-    
-    with col3:
+       
+    with col2:
         create_plotpie(
-            df_filtrado['Hábitos Negativos'].value_counts(),
-            "Distribuição por Hábitos"
+            df_filtrado['Vícios'].value_counts(),
+            "Distribuição por Vícios"
         )
 
 def display_pressure_analysis(df_filtrado):
@@ -478,9 +491,25 @@ def display_pressure_analysis(df_filtrado):
     tab1, tab2, tab3 = st.tabs(["🎯 Pressões Externas", "😰 Estratégias de Enfrentamento", "📊 Correlações"])
     
     with tab1:
-        col1, col2 = st.columns(2)
+        col11, col12 = st.columns(2)
+        col21, col22 = st.columns(2)
         
-        with col1:
+        with col11:
+            # Pressão dos colegas vs estresse
+            fig = create_graphic_bars(
+                df_filtrado,
+                'Pressão dos Colegas',
+                'Índice de Estresse',
+                'Pressão dos Colegas vs Índice de Estresse',
+                None,
+                'Pressão dos Colegas',
+                'Índice de Estresse'
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col12:
+
             # Pressão dos colegas vs estresse
             fig = create_boxplot(
                 df_filtrado,
@@ -490,8 +519,22 @@ def display_pressure_analysis(df_filtrado):
             )
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
+
+        with col21:
+            # Pressão dos colegas vs estresse
+            fig = create_graphic_bars(
+                df_filtrado,
+                'Pressão Familiar',
+                'Índice de Estresse',
+                'Pressão Familiar vs Índice de Estresse',
+                None,
+                'Pressão Familiar',
+                'Índice de Estresse'
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
         
-        with col2:
+        with col22:
             # Pressão familiar vs estresse
             fig = create_boxplot(
                 df_filtrado,
@@ -548,20 +591,50 @@ def display_environment_analysis(df_filtrado):
     """Exibe análise do ambiente de estudo"""
     create_section_header("🏠 Análise do Ambiente de Estudo")
     
-    col1, col2 = st.columns(2)
+    col11, col12 = st.columns(2)
+    col21, col22 = st.columns(2)
     
-    with col1:
+
+    with col11:
+        fig = px.bar(
+                df_filtrado, 
+                x = df_filtrado['Ambiente de Estudo'],
+                y = df_filtrado['Índice de Estresse'], 
+                title = 'Distribuição do Índice de Estresse por Ambiente de Estudo',
+                orientation = 'v',
+                color = None,
+                color_continuous_scale='viridis'
+            )
+        
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col12:
         # Ambiente vs Estresse
         fig = create_boxplot(
             df_filtrado,
-            'Ambiente de Estudo',
+            'Competição Acadêmica',
             'Índice de Estresse',
-            'Ambiente de Estudo vs Índice de Estresse'
+            'Competição Acadêmica vs Índice de Estresse'
         )
         if fig:
             st.plotly_chart(fig, use_container_width=True)
     
-    with col2:
+        
+    with col21:
+        fig = px.bar(
+                df_filtrado, 
+                x = df_filtrado['Competição Acadêmica'],
+                y = df_filtrado['Índice de Estresse'], 
+                title = 'Distribuição do Índice de Estresse por Competição Acadêmica',
+                orientation = 'v',
+                color = None,
+                color_continuous_scale='viridis'
+            )
+        
+        st.plotly_chart(fig, use_container_width=True)
+
+    
+    with col22:
         # Ambiente vs Competição
         fig = create_boxplot(
             df_filtrado,
@@ -593,7 +666,7 @@ def display_habits_analysis(df_filtrado):
         # Hábitos vs Estresse
         fig = create_boxplot(
             df_filtrado,
-            'Hábitos Negativos',
+            'Vícios',
             'Índice de Estresse',
             'Hábitos vs Índice de Estresse'
         )
@@ -603,7 +676,7 @@ def display_habits_analysis(df_filtrado):
     with col2:
         # Hábitos vs Estratégias de Coping
         habit_coping = pd.crosstab(
-            df_filtrado['Hábitos Negativos'],
+            df_filtrado['Vícios'],
             df_filtrado['Estratégia de Enfrentamento'],
             normalize='index'
         ) * 100

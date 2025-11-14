@@ -439,7 +439,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             total_participantes, 
             "Total de Participantes",
-            "Número total de respostas filtradas"
+            None
         )
     
     with col2:
@@ -447,7 +447,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_estresse:.1f}/5", 
             "Stress Provas Média",
-            "Média do nível de estresse nas provas"
+            None
         )
     
     with col3:
@@ -455,7 +455,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{perc_positivo:.1f}%", 
             "Sentimentos Positivos",
-            "Porcentagem de sentimentos positivos"
+            None
         )
     
     with col4:
@@ -463,7 +463,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{perc_negativo:.1f}%", 
             "Sentimentos Negativos",
-            "Porcentagem de sentimentos negativos"
+            None
         )
     
     # Segunda linha de métricas
@@ -474,7 +474,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{perc_acompanhamento:.1f}%", 
             "Acompanhamento",
-            "Porcentagem com acompanhamento psicológico"
+            None
         )
         
     with col6:
@@ -482,7 +482,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_ead:.1f}/5", 
             "Dificuldade EAD",
-            "Média de dificuldade com ensino online"
+            None
         )
         
     with col7:
@@ -490,7 +490,7 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_presencial:.1f}/5", 
             "Preferencia Presencial",
-            "Média de preferência por ensino presencial"
+            None
         )
         
     with col8:
@@ -498,8 +498,32 @@ def display_metrics(df_filtrado):
         create_metric_card(
             f"{media_pressao:.1f}/5", 
             "Pressão Social",
-            "Média de pressão dos colegas"
+            None
         )
+
+def create_graphic_bars(df, x_col, y_col, title, color_col=None, x_label=None, y_label=None):
+    df_temp = df.copy()
+    fig = px.bar(
+        df_temp, 
+        x = df_temp[x_col].unique(),
+        y = df_temp[y_col].unique(), 
+        title = title,
+        orientation = 'v',
+        color = color_col,
+        color_continuous_scale='viridis'
+    )
+
+    fig.update_xaxes()
+
+    if y_label is not None:
+        fig.update_layout(yaxis_title=y_label)
+        
+    if x_label is not None:
+        fig.update_layout(xaxis_title=x_label)
+
+    fig.update_layout(xaxis_tickangle=-45)
+
+    st.plotly_chart(fig, use_container_width=True)
 
 def display_demographic_analysis(df_filtrado):
     """Exibe análise demográfica"""
@@ -574,13 +598,11 @@ def display_work_analysis(df_filtrado):
 def display_home_analysis(df_filtrado):
     """Análise do ambiente doméstico"""
     col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
     
     with col1:
-        create_plotpie(
-            df_filtrado['Atualmente mora só ou divide sua casa?'].apply(padronizar_residencia).value_counts(),
-            "Situação de Moradia"
-        )
-    
+        pass
+
     with col2:
         fig = create_boxplot(
             df_filtrado,
@@ -596,10 +618,16 @@ def display_home_analysis(df_filtrado):
                 )
             st.plotly_chart(fig, use_container_width=True)
     
-    # Nuvem de palavras para características da casa
-    st.subheader("☁️ Características do Ambiente Doméstico")
-    textos_casa = df_filtrado['Marque até 4  características que se aplicam a sua casa.']
-    create_wordcloud(textos_casa, "Características do Lar")
+    with col3:
+        create_plotpie(
+            df_filtrado['Atualmente mora só ou divide sua casa?'].apply(padronizar_residencia).value_counts(),
+            None
+        )
+
+    with col4:
+        st.subheader("☁️ Características do Lar")
+        textos_casa = df_filtrado['Marque até 4  características que se aplicam a sua casa.']
+        create_wordcloud(textos_casa, "Características do Lar")
 
 def display_academic_analysis(df_filtrado):
     """Análise de fatores acadêmicos"""
@@ -615,6 +643,10 @@ def display_academic_analysis(df_filtrado):
             'Estratégias de Enfrentamento vs Estresse'
         )
         if fig:
+            fig.update_layout(
+                xaxis_title="Estratégias de Enfrentamento",
+                yaxis_title="Nível de Estresse"
+            )
             st.plotly_chart(fig, use_container_width=True)
     
     with wordCloud:

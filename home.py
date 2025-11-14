@@ -1,8 +1,13 @@
 import streamlit as st
 
+
+# Sidebar
+st.sidebar.title("Navegação")
+st.sidebar.info("Use o menu acima e aguarde o carregamento para navegar entre as páginas do dashboard.")
+
 # Configuração da página
 st.set_page_config(
-    page_title="Estresse Acadêmico Dashboard",
+    page_title="Dashboard Estresse Acadêmico",
     page_icon="📊",
     layout="centered"
 )
@@ -71,10 +76,19 @@ st.markdown("""
 # Título principal
 st.markdown('<h1 class="main-header">🎓 Dashboard sobre Estresse Acadêmico</h1>', unsafe_allow_html=True)
 st.markdown("""
-Bem-vindo ao **Estresse Acadêmico Dashboard**!  
-Aqui você pode explorar dados, visualizar gráficos e obter insights sobre os níveis de estresse acadêmico.  
-Use o menu lateral para navegar entre as páginas.
+Bem-vindo ao **Dashboard Estresse Acadêmico**!  
+Aqui você poderá explorar dados, visualizar gráficos e obter insights dos níveis de estresse acadêmico.  
 """)
+st.markdown("""
+Foram utilizado dados coletados de diversas fontes para proporcionar uma análise abrangente.""")
+st.markdown("""
+A fonte de dados **KAGGLE** disponivel em [*Student Academic Stress Real World Dataset*](https://www.kaggle.com/datasets/poushal02/student-academic-stress-real-world-dataset) foi utilizada na pesquisa.
+""")
+st.markdown("""
+A fonte de dados **UNIVESP** foi levantada por questionários realizados aos discentes da própria universidade.
+""")
+
+st.markdown(" Use o menu lateral para navegar entre as páginas.")
 
 # Botão de navegação
 if st.button("Explorar Dados"):
