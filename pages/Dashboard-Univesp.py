@@ -578,7 +578,6 @@ def display_work_analysis(df_filtrado):
     column_interference = 'Quanto sua rotina de trabalho interfere nos estudos?'
     column_characteristics = 'Marque até 4 características se aplicam ao seu trabalho'
     
-    """Análise do ambiente de trabalho"""
     col11, col22 = st.columns(2)
     col12, _  = st.columns(2)
     col21 = st.columns(1)[0]
@@ -637,8 +636,7 @@ def display_home_analysis(df_filtrado):
     column_residence = 'Atualmente mora só ou divide sua casa?'
     column_interference = 'Quanto sua rotina de casa interfere nos estudos?'
     column_characteristics = 'Marque até 4 características que se aplicam a sua casa.'
-    
-    """Análise do ambiente doméstico"""
+
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
@@ -695,7 +693,6 @@ def display_academic_analysis(df_filtrado):
     column_pression_social = 'Sente pressionado por seus colegas de aula ou grupo?'
     column_group_difficulty = 'Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?'
     
-    """Análise de fatores acadêmicos"""
     bar_stress = st.columns(1)[0]
     bar_group = st.columns(1)[0]
     wordCloud, _ = st.columns(2)
@@ -789,7 +786,6 @@ def display_sentiment_analysis(df_filtrado):
     column_feeling = 'Resuma em uma palavra como se sente no período de provas.'
     column_stress = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
     
-    """Análise de sentimentos"""
     col1, col2 = st.columns(2)
     
     with col1:
