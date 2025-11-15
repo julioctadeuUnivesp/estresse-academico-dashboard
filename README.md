@@ -20,10 +20,10 @@ projeto-estresse-academico/
 │   └── estresse_academico_univesp.csv
 │
 ├── pages/
-│   ├── kaggler.py
-│   └── univesp.py
+│   ├── Dashboard-Kaggle.py
+│   └── Dashboard-Univesp.py
 │
-├── dashboard.py
+├── home.py
 ├── requirements.txt
 ├── README.md
 │
