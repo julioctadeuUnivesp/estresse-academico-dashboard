@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import re
@@ -98,6 +97,7 @@ def load_data():
     df.columns = [col.strip().replace('"', '') for col in df.columns]
     df['Qual sua Idade?'] = df['Qual sua Idade?'].fillna(0).astype(int)
     df['Qual semestre se encontra?'] = df['Qual semestre se encontra?'].fillna(0).astype(int)
+    df['Atualmente mora só ou divide sua casa?'] = df['Atualmente mora só ou divide sua casa?'].apply(padronizar_residencia)
 
     # Preencher valores vazios
     df.fillna('Não informado', inplace=True)
@@ -221,12 +221,13 @@ def padronizar_residencia(resposta):
     else:
         return 'Outros'
 
-def create_plotpie(df, title):
+def create_plotpie(df, title, color=None):
     """Cria gráfico de pizza"""
     fig = px.pie(
         values=df.values,
         names=df.index,
-        title=title
+        title=title,
+        color=color
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -318,6 +319,7 @@ def create_boxplot(df, x_col, y_col, title, color_map=None):
 
 def create_metric_card(value, label, help_text=None):
     """Cria um card de métrica estilizado"""
+    
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-value">{value}</div>
@@ -351,14 +353,24 @@ def create_sidebar_filters(df):
         with col3:
             eixos = ['Todos'] + list(df['Qual o eixo do seu curso?'].dropna().unique())
             eixo_selecionado = st.selectbox("Eixo do Curso", eixos)
+            
+        with col4:
+            eixos = ['Todos'] + list(df['Atualmente mora só ou divide sua casa?'].dropna().unique())
+            convivio_selecionado = st.selectbox("Convívio", eixos)
     
     with st.sidebar.container():
         st.subheader("Filtros Adicionais")
         
         estresse_min, estresse_max = st.slider(
-            "🎯 Nível de Estresse (1-5)",
+            ":anger: Nível de Estresse (1-5)",
             min_value=1, max_value=5, value=(1, 5),
             help="Filtre pelo nível de estresse relatado"
+        )
+        
+        pressao_social_min, pressao_social_max = st.slider(
+            ":busts_in_silhouette: Nível de Pressão Social (1-5)",
+            min_value=1, max_value=5, value=(1, 5),
+            help="Filtre pelo nível de pressão social relatado"
         )
         
         acompanhamento = st.selectbox(
@@ -380,8 +392,11 @@ def create_sidebar_filters(df):
         'genero': genero_selecionado,
         'raca': raca_selecionada,
         'eixo': eixo_selecionado,
+        'convivio': convivio_selecionado,
         'estresse_min': estresse_min,
         'estresse_max': estresse_max,
+        'pressao_social_min': pressao_social_min,
+        'pressao_social_max': pressao_social_max,
         'acompanhamento': acompanhamento
     }
 
@@ -390,27 +405,44 @@ def create_sidebar_filters(df):
 # ============================================================================
 
 def apply_filters(df, filters):
+    gender = 'Como se identifica?'
+    race = 'Qual é a sua cor ou raça/etnia?'
+    course_axis = 'Qual o eixo do seu curso?'
+    residence = 'Atualmente mora só ou divide sua casa?'
+    therapy = 'Faz acompanhamento psicológico ou cuidado a saúde mental?'
+    stress_level = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
+    social_pressure = 'Sente pressionado por seus colegas de aula ou grupo?'
+    
+    
     """Aplica os filtros selecionados"""
     df_filtrado = df.copy()
     
     if filters['genero'] != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Como se identifica?'] == filters['genero']]
+        df_filtrado = df_filtrado[df_filtrado[gender] == filters['genero']]
     
     if filters['raca'] != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Qual é a sua cor ou raça/etnia?'] == filters['raca']]
+        df_filtrado = df_filtrado[df_filtrado[race] == filters['raca']]
     
     if filters['eixo'] != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Qual o eixo do seu curso?'] == filters['eixo']]
+        df_filtrado = df_filtrado[df_filtrado[course_axis] == filters['eixo']]
+        
+    if filters['convivio'] != 'Todos':
+        df_filtrado = df_filtrado[df_filtrado[residence] == filters['convivio']]
         
     if filters['acompanhamento'] != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Faz acompanhamento psicológico ou cuidado a saúde mental?'] == filters['acompanhamento']]
+        df_filtrado = df_filtrado[df_filtrado[therapy] == filters['acompanhamento']]
     
     # Filtrar por nível de estresse
     df_filtrado = df_filtrado[
-        (df_filtrado['Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'] >= filters['estresse_min']) &
-        (df_filtrado['Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'] <= filters['estresse_max'])
+        (df_filtrado[stress_level] >= filters['estresse_min']) &
+        (df_filtrado[stress_level] <= filters['estresse_max'])
     ]
     
+    df_filtrado = df_filtrado[
+        (df_filtrado[social_pressure] >= filters['pressao_social_min']) &
+        (df_filtrado[social_pressure] <= filters['pressao_social_max'])
+    ]
+
     return df_filtrado
 
 def analyze_sentiments(df_filtrado):
@@ -501,29 +533,6 @@ def display_metrics(df_filtrado):
             None
         )
 
-def create_graphic_bars(df, x_col, y_col, title, color_col=None, x_label=None, y_label=None):
-    df_temp = df.copy()
-    fig = px.bar(
-        df_temp, 
-        x = df_temp[x_col].unique(),
-        y = df_temp[y_col].unique(), 
-        title = title,
-        orientation = 'v',
-        color = color_col,
-        color_continuous_scale='viridis'
-    )
-
-    fig.update_xaxes()
-
-    if y_label is not None:
-        fig.update_layout(yaxis_title=y_label)
-        
-    if x_label is not None:
-        fig.update_layout(xaxis_title=x_label)
-
-    fig.update_layout(xaxis_tickangle=-45)
-
-    st.plotly_chart(fig, use_container_width=True)
 
 def display_demographic_analysis(df_filtrado):
     """Exibe análise demográfica"""
@@ -553,7 +562,7 @@ def display_factors_analysis(df_filtrado):
     """Exibe análise de fatores de influência"""
     create_section_header("🏠 Análise de Fatores de Influência")
     
-    tab1, tab2, tab3 = st.tabs(["🏢 Trabalho", "🏠 Casa", "📚 Fatores Acadêmicos"])
+    tab1, tab2, tab3 = st.tabs(["🏢 Trabalho", "🏠 Casa", ":school: Fatores Acadêmicos"])
     
     with tab1:
         display_work_analysis(df_filtrado)
@@ -565,21 +574,48 @@ def display_factors_analysis(df_filtrado):
         display_academic_analysis(df_filtrado)
 
 def display_work_analysis(df_filtrado):
+    column_model = 'Qual o modelo de trabalho?'
+    column_interference = 'Quanto sua rotina de trabalho interfere nos estudos?'
+    column_characteristics = 'Marque até 4 características se aplicam ao seu trabalho'
+    
     """Análise do ambiente de trabalho"""
-    col1 = st.columns(1)[0]
-    col2 = st.columns(1)[0]
+    col11, col22 = st.columns(2)
+    col12, _  = st.columns(2)
+    col21 = st.columns(1)[0]
     
-    with col1:
+    with col11:
         create_plotpie(
-            df_filtrado['Qual o modelo de trabalho?'].value_counts(),
-            "Modelo de Trabalho"
+            df_filtrado[column_model].value_counts(),
+            "Distribuição por modelo de trabalho",
+            None
         )
+
+    with col12:
+        fig = px.bar(
+            df_filtrado.groupby(column_model)[column_interference]
+            .mean()
+            .reset_index(),
+            x=column_model,
+            y=column_interference,
+            title='Interferencia do Trabalho',
+            labels={
+                column_model: 'Modelo de Trabalho',
+                column_interference: 'Nível de Estresse'
+            },
+            color=column_model
+        )
+        
+        fig.update_xaxes(showticklabels=False)
+        fig.update_yaxes(showticklabels=False)
+        
+        st.plotly_chart(fig, use_container_width=True)
+
     
-    with col2:
+    with col21:
         fig = create_boxplot(
             df_filtrado,
-            'Marque até 4 características se aplicam ao seu trabalho', 
-            'Quanto sua rotina de trabalho interfere nos estudos?', 
+            column_characteristics, 
+            column_interference, 
             'Interferência do Trabalho nos Estudos'
         )
         if fig:
@@ -590,24 +626,53 @@ def display_work_analysis(df_filtrado):
                 )
             st.plotly_chart(fig, use_container_width=True)
     
-    # Nuvem de palavras para características do trabalho
-    st.subheader("☁️ Características do Ambiente de Trabalho")
-    textos_trabalho = df_filtrado['Marque até 4 características se aplicam ao seu trabalho']
-    create_wordcloud(textos_trabalho, "Características do Trabalho")
+    with col22:
+        # Nuvem de palavras para características do trabalho
+        st.subheader("☁️ Características do Ambiente de Trabalho")
+        textos_trabalho = df_filtrado[column_characteristics]
+        create_wordcloud(textos_trabalho, "Características do Trabalho")
+
 
 def display_home_analysis(df_filtrado):
+    column_residence = 'Atualmente mora só ou divide sua casa?'
+    column_interference = 'Quanto sua rotina de casa interfere nos estudos?'
+    column_characteristics = 'Marque até 4 características que se aplicam a sua casa.'
+    
     """Análise do ambiente doméstico"""
     col1, col2 = st.columns(2)
     col3, col4 = st.columns(2)
     
     with col1:
-        pass
+        create_plotpie(
+            df_filtrado[column_residence].value_counts(),
+            None
+        )
 
     with col2:
+        
+        fig = px.bar(
+            df_filtrado.groupby(column_residence)[column_interference]
+            .mean()
+            .reset_index(),
+            x=column_residence,
+            y=column_interference,
+            title='Interferência nos Estudos por Convívio na Residência',
+            color=column_residence,
+            labels={
+            column_residence: 'Convivio na Residência',
+            column_interference: 'Interferência Média nos Estudos'
+            },
+            color_continuous_scale='viridis'
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        fig.update_xaxes(showticklabels=False)
+        st.plotly_chart(fig, use_container_width=True)
+    
+    with col3:
         fig = create_boxplot(
             df_filtrado,
-            'Marque até 4  características que se aplicam a sua casa.', 
-            'Quanto sua rotina de casa interfere nos estudos?', 
+            column_characteristics, 
+            column_interference, 
             'Interferência da Casa nos Estudos'
         )
         if fig:
@@ -617,45 +682,94 @@ def display_home_analysis(df_filtrado):
                 legend_title="Características Casa"
                 )
             st.plotly_chart(fig, use_container_width=True)
-    
-    with col3:
-        create_plotpie(
-            df_filtrado['Atualmente mora só ou divide sua casa?'].apply(padronizar_residencia).value_counts(),
-            None
-        )
-
+        
     with col4:
         st.subheader("☁️ Características do Lar")
-        textos_casa = df_filtrado['Marque até 4  características que se aplicam a sua casa.']
+        textos_casa = df_filtrado[column_characteristics]
         create_wordcloud(textos_casa, "Características do Lar")
 
+
 def display_academic_analysis(df_filtrado):
+    column_strategy = 'Qual estratégia de enfrentamento você usa como estudante?'
+    column_stress = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
+    column_pression_social = 'Sente pressionado por seus colegas de aula ou grupo?'
+    column_group_difficulty = 'Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?'
+    
     """Análise de fatores acadêmicos"""
-    wordCloud = st.columns(1)[0]
+    bar_stress = st.columns(1)[0]
+    bar_group = st.columns(1)[0]
+    wordCloud, _ = st.columns(2)
     box = st.columns(1)[0]
     
+    with bar_stress:
+        # Gráfico de barras para ambiente de estudo
+        fig = px.bar(
+            df_filtrado.groupby(column_strategy)[column_stress]
+            .mean()
+            .reset_index(),
+            x=column_strategy,
+            y=column_stress,
+            title='Avaliação do Ambiente de Estudo vs Nível de Estresse',
+            labels={
+                column_strategy: 'Estratégias de Enfrentamento',
+                column_stress: 'Nível de Estresse'
+            },
+            color=column_strategy,
+            color_continuous_scale='viridis'
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        fig.update_xaxes(showticklabels=False)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with bar_group:
+        fig = px.bar(
+            df_filtrado.groupby(column_strategy)[column_pression_social]
+            .mean()
+            .reset_index(),
+            x=column_strategy,
+            y=column_pression_social,
+            title='Estratégias de Enfrentamento vs Nível de Pressão Social',
+            labels={
+                column_strategy: 'Estratégias de Enfrentamento',
+                column_pression_social: 'Nível de Pressão Social'
+            },
+            color=column_strategy
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        fig.update_xaxes(showticklabels=False)
+        st.plotly_chart(fig, use_container_width=True)
+
     with box:
         # Estratégias de enfrentamento vs estresse
         fig = create_boxplot(
             df_filtrado,
-            'Qual estratégia de enfrentamento você usa como estudante?',
-            'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?',
+            column_strategy,
+            column_stress,
             'Estratégias de Enfrentamento vs Estresse'
         )
         if fig:
             fig.update_layout(
-                xaxis_title="Estratégias de Enfrentamento",
-                yaxis_title="Nível de Estresse"
+            xaxis_title="Estratégias",
+            yaxis_title="Nível de Estresse",
+            legend_title="Estratégias"
             )
+            
+            fig.update_xaxes(showticklabels=False)
+            
             st.plotly_chart(fig, use_container_width=True)
     
     with wordCloud:
         # Dificuldades em trabalhos em grupo
         st.subheader("📝 Dificuldades em Trabalhos em Grupo")
-        textos_grupo = df_filtrado['Em poucas palavras quais dificuldades você sente em realizar trabalhos em grupo?']
+        textos_grupo = df_filtrado[column_group_difficulty]
         create_wordcloud(textos_grupo, "Dificuldades em Grupo")
 
+
 def display_sentiment_behavior_analysis(df_filtrado):
+    column_sentiment = 'Sentimento_Naive_Bayes'
+    column_feeling = 'Resuma em uma palavra como se sente no período de provas.'
+    
+    
     """Exibe análise de sentimentos e comportamentos"""
     create_section_header("😰 Análise de Sentimentos e Comportamentos")
     
@@ -671,11 +785,15 @@ def display_sentiment_behavior_analysis(df_filtrado):
         display_vices_analysis(df_filtrado)
 
 def display_sentiment_analysis(df_filtrado):
+    column_sentiment = 'Sentimento_Naive_Bayes'
+    column_feeling = 'Resuma em uma palavra como se sente no período de provas.'
+    column_stress = 'Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?'
+    
     """Análise de sentimentos"""
     col1, col2 = st.columns(2)
     
     with col1:
-        sentiment_count = df_filtrado['Sentimento_Naive_Bayes'].value_counts()
+        sentiment_count = df_filtrado[column_sentiment].value_counts()
         fig_sentimentos = px.pie(
             values=sentiment_count.values,
             names=sentiment_count.index,
@@ -690,16 +808,16 @@ def display_sentiment_analysis(df_filtrado):
         st.plotly_chart(fig_sentimentos, use_container_width=True)
     
     with col2:
-        textos_sentimentos = df_filtrado['Resuma em uma palavra como se sente no período de provas.']
+        textos_sentimentos = df_filtrado[column_feeling]
         create_wordcloud(textos_sentimentos, "Sentimentos nas Provas")
     
     # Análise de correlação entre sentimentos e estresse
     st.subheader("📈 Estresse vs Sentimentos")
     fig_box = px.box(
         df_filtrado,
-        x='Sentimento_Naive_Bayes',
-        y='Em uma escala de 1 a 5, o quanto o período de provas é estressante pra você?',
-        color='Sentimento_Naive_Bayes',
+        x=column_sentiment,
+        y=column_stress,
+        color=column_sentiment,
         color_discrete_map={
             'positivo': '#2ecc71',
             'neutro': '#f39c12',
@@ -709,53 +827,88 @@ def display_sentiment_analysis(df_filtrado):
     st.plotly_chart(fig_box, use_container_width=True)
 
 def display_habits_analysis(df_filtrado):
+    column_stress = 'Quanto esse(es) hábito(os) ajuda(am) com seu stress nos estudos?'
+    column_habit = 'Marque abaixo até 3 hábitos que tem.'
+    
+    
     """Análise de hábitos"""
     st.subheader("💪 Hábitos vs Nível de Estresse")
     
-    if not df_filtrado.empty:
-        col_estresse = 'Quanto esse(es) hábito(os) ajuda(am) com seu stress nos estudos?'
-        col_habito = 'Marque abaixo até 3 hábitos que tem.'
+    bar_habitos = st.columns(1)[0]
+    plot_habitos = st.columns(1)[0]
     
+    if not df_filtrado.empty:
         # Preparar dataframe separando múltiplas opções em linhas individuais
-        df_habitos = df_filtrado[[col_estresse, col_habito]].copy()
-        df_habitos[col_habito] = df_habitos[col_habito].fillna('').astype(str)
+        df_habitos = df_filtrado[[column_stress, column_habit]].copy()
+        df_habitos[column_habit] = df_habitos[column_habit].fillna('').astype(str)
         
         # Remover parênteses e o conteúdo entre eles
-        df_habitos[col_habito] = df_habitos[col_habito].str.replace(r'\s*\([^)]*\)', '', regex=True)
+        df_habitos[column_habit] = df_habitos[column_habit].str.replace(r'\s*\([^)]*\)', '', regex=True)
         
         # Dividir por ';' e explodir
-        df_habitos[col_habito] = df_habitos[col_habito].str.split(r'\s*;\s*')
-        df_habitos = df_habitos.explode(col_habito)
+        df_habitos[column_habit] = df_habitos[column_habit].str.split(r'\s*;\s*')
+        df_habitos = df_habitos.explode(column_habit)
         
         # Limpeza básica dos valores
-        df_habitos[col_habito] = df_habitos[col_habito].str.strip()
-        df_habitos = df_habitos[df_habitos[col_habito] != '']
-        df_habitos = df_habitos[~df_habitos[col_habito].str.lower().isin(['não informado', 'nao informado'])]
+        df_habitos[column_habit] = df_habitos[column_habit].str.strip()
+        df_habitos = df_habitos[df_habitos[column_habit] != '']
+        df_habitos = df_habitos[~df_habitos[column_habit].str.lower().isin(['não informado', 'nao informado'])]
     
         if not df_habitos.empty:
-            fig_box = create_boxplot(
-                df_habitos,
-                col_habito,
-                col_estresse,
-                'Eficácia dos Hábitos no Controle do Estresse'
-            )
-            if fig_box:
-                st.plotly_chart(fig_box, use_container_width=True)
-        else:
-            st.warning("Não há dados suficientes para analisar hábitos.")
+            
+            with bar_habitos:
+                fig_bar = px.bar(
+                    df_habitos.groupby(column_habit)[column_stress]
+                    .mean()
+                    .reset_index(),
+                    x=column_habit,  
+                    y=column_stress,
+                    title='Eficácia Média dos Hábitos no Controle do Estresse',
+                    labels={
+                        column_habit: 'Tipo de Hábito',
+                        column_stress: 'Eficácia Média no Controle do Estresse'
+                    },
+                    color=column_habit
+                )
+                fig_bar.update_xaxes(showticklabels=False)
+                st.plotly_chart(fig_bar, use_container_width=True)
+            
+            with plot_habitos:
+                fig_box = create_boxplot(
+                    df_habitos,
+                    column_habit,
+                    column_stress,
+                    'Eficácia dos Hábitos no Controle do Estresse'
+                )
+                
+                fig_box.update_layout(
+                    xaxis_title="Hábitos",
+                    yaxis_title="Contribuição no Estresse",
+                    showlegend=True,
+                    xaxis_tickangle=-45,
+                )
+                
+                if fig_box:
+                    st.plotly_chart(fig_box, use_container_width=True)
+                else:
+                    st.warning("Não há dados suficientes para analisar hábitos.")
     else:
         st.warning("Não há dados filtrados para analisar hábitos.")
+
 
 def display_vices_analysis(df_filtrado):
     """Análise de vícios"""
     st.subheader("🚫 Vícios vs Contribuição no Estresse")
+        
+    column_stress = 'O quanto esse(es) vício(os) contribui(em) no seu stress nos estudos?'
+    col_vicio = 'Marque abaixo até 3 vícios que tem.'
+    
+    bar_vicios = st.columns(1)[0]
+    plot_vicios = st.columns(1)[0]
     
     if not df_filtrado.empty:
-        col_estresse = 'O quanto esse(es) vício(os) contribui(em) no seu stress nos estudos?'
-        col_vicio = 'Marque abaixo até 3 vícios que tem.'
-    
         # Preparar dataframe separando múltiplas opções em linhas individuais
-        df_vicios = df_filtrado[[col_estresse, col_vicio]].copy()
+        df_vicios = df_filtrado[[column_stress, col_vicio]].copy()
         df_vicios[col_vicio] = df_vicios[col_vicio].fillna('').astype(str)
         
         # Remover parênteses e o conteúdo entre eles
@@ -771,39 +924,62 @@ def display_vices_analysis(df_filtrado):
         df_vicios = df_vicios[~df_vicios[col_vicio].str.lower().isin(['não informado', 'nao informado'])]
     
         if not df_vicios.empty:
-            # Ordenar categorias pelo número de ocorrências
             ordem = df_vicios[col_vicio].value_counts().index.tolist()
             
-            # Criar mapa de cores consistente para cada categoria
-            colors = px.colors.qualitative.Plotly
-            color_cycle = cycle(colors)
-            color_map = {cat: next(color_cycle) for cat in ordem}
+            with bar_vicios:
+                # Gráfico de barras dos vícios
+                fig = px.bar(
+                    df_vicios.groupby(col_vicio)[column_stress]
+                    .mean()
+                    .reset_index(),
+                    x=col_vicio,  
+                    y=column_stress,
+                    title='Contribuição Média dos Vícios no Estresse',
+                    labels={
+                        col_vicio: 'Tipo de Vício',
+                        column_stress: 'Contribuição Média no Estresse'
+                    },
+                    color=col_vicio,
+                    category_orders={col_vicio: ordem}
+                )      
+                
+                fig.update_xaxes(showticklabels=False)
+                
+                st.plotly_chart(fig, use_container_width=True)
+                
             
-            fig_box = px.box(
-                df_vicios,
-                x=col_vicio,
-                y=col_estresse,
-                color=col_vicio,
-                category_orders={col_vicio: ordem},
-                color_discrete_map=color_map,
-                title='Contribuição dos Vícios no Estresse',
-                height=500
-            )
-            
-            fig_box.update_layout(
-                xaxis_title="Tipo de Vício",
-                yaxis_title="Contribuição no Estresse",
-                showlegend=True,
-                xaxis_tickangle=-45,
-            )
-            
-            fig_box.update_xaxes(showticklabels=False)
-            
-            st.plotly_chart(fig_box, use_container_width=True)
+            # Ordenar categorias pelo número de ocorrências
+            with plot_vicios:
+                # Criar mapa de cores consistente para cada categoria
+                colors = px.colors.qualitative.Plotly
+                color_cycle = cycle(colors)
+                color_map = {cat: next(color_cycle) for cat in ordem}
+                
+                fig_box = px.box(
+                    df_vicios,
+                    x=col_vicio,
+                    y=column_stress,
+                    color=col_vicio,
+                    category_orders={col_vicio: ordem},
+                    color_discrete_map=color_map,
+                    title='Contribuição dos Vícios no Estresse',
+                    height=500
+                )
+                
+                fig_box.update_layout(
+                    xaxis_title="Tipo de Vício",
+                    yaxis_title="Contribuição no Estresse",
+                    showlegend=True,
+                    xaxis_tickangle=-45,
+                )
+                
+                fig_box.update_xaxes(showticklabels=False)
+                
+                st.plotly_chart(fig_box, use_container_width=True)
+        
         else:
-            st.warning("Não há dados suficientes para analisar vícios.")
-    else:
-        st.warning("Não há dados filtrados para analisar vícios.")
+            st.warning("Não há dados filtrados para analisar vícios.")
+
 
 def display_data_export(df_filtrado):
     """Exibe seção de dados e exportação"""
@@ -820,11 +996,12 @@ def display_data_export(df_filtrado):
     with tab3:
         display_export_options(df_filtrado)
 
+
 def display_statistical_analysis(df_filtrado):
     """Exibe análise estatística"""
     st.subheader("Estatísticas Descritivas")
     
-    col1, col2 = st.columns(2)
+    col1 = st.columns(1)[0]
     
     with col1:
         st.markdown("**Variáveis Numéricas**")
@@ -833,21 +1010,6 @@ def display_statistical_analysis(df_filtrado):
             st.dataframe(df_filtrado[numeric_cols].describe())
         else:
             st.info("Não há variáveis numéricas para análise.")
-    
-    with col2:
-        st.markdown("**Correlações**")
-        if len(numeric_cols) > 1:
-            corr_matrix = df_filtrado[numeric_cols].corr()
-            fig_corr = px.imshow(
-                corr_matrix,
-                text_auto=True,
-                aspect="auto",
-                color_continuous_scale='RdBu_r',
-                title="Matriz de Correlação"
-            )
-            st.plotly_chart(fig_corr, use_container_width=True)
-        else:
-            st.info("Não há variáveis numéricas suficientes para correlação.")
 
 def display_export_options(df_filtrado):
     """Exibe opções de exportação"""
@@ -908,6 +1070,7 @@ def main():
     filters = create_sidebar_filters(df)
     
     # Aplicar filtros
+    
     df_filtrado = apply_filters(df, filters)
     
     # Análise de sentimentos

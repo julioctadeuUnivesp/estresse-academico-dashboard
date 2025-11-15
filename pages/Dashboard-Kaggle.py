@@ -278,19 +278,20 @@ def create_boxplot(df, x_col, y_col, title):
     return fig_box
 
 
-def create_graphic_bars(df, x_col, y_col, title, color_col=None, x_label=None, y_label=None):
-    df_temp = df.copy()
+def create_bars_graphics(df, x_col, y_col, title, color_col=None, x_label=None, y_label=None):
     fig = px.bar(
-        df_temp, 
-        x = df_temp[x_col].unique(),
-        y = df_temp[y_col].unique(), 
+        df.groupby(x_col)[y_col]
+        .mean()
+        .reset_index(),
+        x = x_col,
+        y = y_col, 
         title = title,
         orientation = 'v',
-        color = color_col,
+        color = x_col,
         color_continuous_scale='viridis'
     )
 
-    fig.update_xaxes()
+    fig.update_xaxes(showticklabels=False)
 
     if y_label is not None:
         fig.update_layout(yaxis_title=y_label)
@@ -485,51 +486,30 @@ def display_demographic_analysis(df_filtrado):
         )
 
 def display_pressure_analysis(df_filtrado):
+    column_stress = 'Índice de Estresse'
+    column_pression_family = 'Pressão Familiar'
+    column_pression_friends = 'Pressão dos Colegas'
+    column_strategy = 'Estratégia de Enfrentamento'
+    
+    
     """Exibe análise de pressões"""
     create_section_header("📈 Análise de Pressões e Estresse")
     
-    tab1, tab2, tab3 = st.tabs(["🎯 Pressões Externas", "😰 Estratégias de Enfrentamento", "📊 Correlações"])
+    tab1, tab2 = st.tabs(["🎯 Pressões Familiares", "😰 Estratégias de Enfrentamento"])
     
     with tab1:
-        col11, col12 = st.columns(2)
         col21, col22 = st.columns(2)
-        
-        with col11:
-            # Pressão dos colegas vs estresse
-            fig = create_graphic_bars(
-                df_filtrado,
-                'Pressão dos Colegas',
-                'Índice de Estresse',
-                'Pressão dos Colegas vs Índice de Estresse',
-                None,
-                'Pressão dos Colegas',
-                'Índice de Estresse'
-            )
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-        
-        with col12:
-
-            # Pressão dos colegas vs estresse
-            fig = create_boxplot(
-                df_filtrado,
-                'Pressão dos Colegas',
-                'Índice de Estresse',
-                'Pressão dos Colegas vs Índice de Estresse'
-            )
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
 
         with col21:
             # Pressão dos colegas vs estresse
-            fig = create_graphic_bars(
+            fig = create_bars_graphics(
                 df_filtrado,
-                'Pressão Familiar',
-                'Índice de Estresse',
-                'Pressão Familiar vs Índice de Estresse',
+                column_pression_family,
+                column_stress,
+                'Distribuição',
                 None,
-                'Pressão Familiar',
-                'Índice de Estresse'
+                column_pression_family,
+                column_stress
             )
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
@@ -540,110 +520,104 @@ def display_pressure_analysis(df_filtrado):
                 df_filtrado,
                 'Pressão Familiar',
                 'Índice de Estresse',
-                'Pressão Familiar vs Índice de Estresse'
+                'Concentração'
             )
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
-        col1, col2 = st.columns(2)
+        col2 = st.columns(1)[0]
+        col1 = st.columns(1)[0] 
         
         with col1:
-            # Estratégias de coping
-            coping_stats = df_filtrado.groupby('Estratégia de Enfrentamento').agg({
-                'Índice de Estresse': 'mean',
-                'Pressão dos Colegas': 'mean',
-                'Pressão Familiar': 'mean'
-            }).round(2)
-            
-            coping_stats.columns = ['Estresse Médio', 'Pressão Colegas', 'Pressão Familiar']
-            st.dataframe(coping_stats, use_container_width=True)
-        
-        with col2:
             # Gráfico de barras das estratégias
-            strategy_counts = df_filtrado['Estratégia de Enfrentamento'].value_counts()
-            fig = px.bar(
-                x=strategy_counts.index,
-                y=strategy_counts.values,
-                title="Distribuição das Estratégias de Enfrentamento",
-                labels={'x': 'Estratégia', 'y': 'Quantidade'}
-            )
-            fig.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with tab3:
-        # Matriz de correlação
-        numeric_cols = ['Pressão dos Colegas', 'Pressão Familiar', 
-                       'Competição Acadêmica',
-                       'Índice de Estresse']
         
-        corr_matrix = df_filtrado[numeric_cols].corr()
-        fig_corr = px.imshow(
-            corr_matrix,
-            text_auto=True,
-            aspect="auto",
-            color_continuous_scale='RdBu_r',
-            title="Matriz de Correlação entre Variáveis"
-        )
-        st.plotly_chart(fig_corr, use_container_width=True)
+            create_bars_graphics(
+                df_filtrado,
+                column_strategy,
+                column_stress,
+                'Distribuição das Estratégias de Enfrentamento',
+                column_strategy,
+                column_strategy,
+                column_stress
+            )
+    
+        with col2:
+            pass
 
 def display_environment_analysis(df_filtrado):
+    study_env = 'Ambiente de Estudo'
+    competition_acad = 'Competição Acadêmica'
+    column_stress = 'Índice de Estresse'
+    
     """Exibe análise do ambiente de estudo"""
     create_section_header("🏠 Análise do Ambiente de Estudo")
     
-    col11, col12 = st.columns(2)
-    col21, col22 = st.columns(2)
-    
+    environment, competition =  st.tabs([":house_with_garden: Ambiente de Estudos", ":men_wrestling: Competição Acadêmica"])
 
-    with col11:
-        fig = px.bar(
-                df_filtrado, 
-                x = df_filtrado['Ambiente de Estudo'],
-                y = df_filtrado['Índice de Estresse'], 
-                title = 'Distribuição do Índice de Estresse por Ambiente de Estudo',
-                orientation = 'v',
-                color = None,
-                color_continuous_scale='viridis'
-            )
+    with environment:    
+        col11, col12 = st.columns(2)
         
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col12:
-        # Ambiente vs Estresse
-        fig = create_boxplot(
-            df_filtrado,
-            'Competição Acadêmica',
-            'Índice de Estresse',
-            'Competição Acadêmica vs Índice de Estresse'
-        )
-        if fig:
+        with col11:
+            
+            fig = px.bar(
+                    df_filtrado.groupby(study_env)[column_stress]
+                    .mean()
+                    .reset_index(),
+                    x = study_env,
+                    y = column_stress, 
+                    title = 'Distribuição do Índice de Estresse por Ambiente de Estudo',
+                    orientation = 'v',
+                    color = study_env,
+                    color_continuous_scale='viridis'
+                )
+            
+            fig.update_xaxes(showticklabels=False)
+            
             st.plotly_chart(fig, use_container_width=True)
-    
-        
-    with col21:
-        fig = px.bar(
-                df_filtrado, 
-                x = df_filtrado['Competição Acadêmica'],
-                y = df_filtrado['Índice de Estresse'], 
-                title = 'Distribuição do Índice de Estresse por Competição Acadêmica',
-                orientation = 'v',
-                color = None,
-                color_continuous_scale='viridis'
-            )
-        
-        st.plotly_chart(fig, use_container_width=True)
 
-    
-    with col22:
-        # Ambiente vs Competição
-        fig = create_boxplot(
-            df_filtrado,
-            'Ambiente de Estudo',
-            'Competição Acadêmica',
-            'Ambiente de Estudo vs Competição Acadêmica'
-        )
-        if fig:
+        with col12:
+            # Ambiente vs Competição
+            fig = create_boxplot(
+                df_filtrado,
+                'Ambiente de Estudo',
+                'Competição Acadêmica',
+                'Ambiente de Estudo vs Competição Acadêmica'
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            
+    with competition:   
+        col21, col22 = st.columns(2)
+     
+        with col21:
+            fig = px.bar(
+                    df_filtrado.groupby(competition_acad)[column_stress]
+                    .mean()
+                    .reset_index(), 
+                    x = competition_acad,
+                    y = column_stress, 
+                    title = 'Distribuição do Índice de Estresse por Competição Acadêmica',
+                    orientation = 'v',
+                    color = competition_acad,
+                    color_continuous_scale='viridis'
+                )
+            fig.update_xaxes(showticklabels=False)
+            
             st.plotly_chart(fig, use_container_width=True)
+
+        
+        with col22:
+                # Ambiente vs Estresse
+            fig = create_boxplot(
+                df_filtrado,
+                'Competição Acadêmica',
+                'Índice de Estresse',
+                'Competição Acadêmica vs Índice de Estresse'
+            )
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+
     
     # Estatísticas por ambiente
     st.subheader("📋 Estatísticas por Tipo de Ambiente")
@@ -660,9 +634,9 @@ def display_habits_analysis(df_filtrado):
     """Exibe análise de hábitos"""
     create_section_header("🚭 Análise de Hábitos")
     
-    col1, col2 = st.columns(2)
+    plot_vicios = st.columns(1)[0]
     
-    with col1:
+    with plot_vicios:
         # Hábitos vs Estresse
         fig = create_boxplot(
             df_filtrado,
@@ -673,66 +647,7 @@ def display_habits_analysis(df_filtrado):
         if fig:
             st.plotly_chart(fig, use_container_width=True)
     
-    with col2:
-        # Hábitos vs Estratégias de Coping
-        habit_coping = pd.crosstab(
-            df_filtrado['Vícios'],
-            df_filtrado['Estratégia de Enfrentamento'],
-            normalize='index'
-        ) * 100
-        
-        fig = px.imshow(
-            habit_coping,
-            text_auto=True,
-            aspect="auto",
-            color_continuous_scale='Blues',
-            title="Hábitos vs Estratégias de Enfrentamento (%)"
-        )
-        st.plotly_chart(fig, use_container_width=True)
 
-def display_academic_stage_analysis(df_filtrado):
-    """Exibe análise por estágio acadêmico"""
-    create_section_header("🎓 Análise por Estágio Acadêmico")
-    
-    tab1, tab2 = st.tabs(["📊 Comparação entre Estágios", "📈 Tendências"])
-    
-    with tab1:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Estágio vs Estresse
-            fig = create_boxplot(
-                df_filtrado,
-                'Estágio Acadêmico',
-                'Índice de Estresse',
-                'Estágio Acadêmico vs Índice de Estresse'
-            )
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-        
-        with col2:
-            # Estágio vs Competição
-            fig = create_boxplot(
-                df_filtrado,
-                'Estágio Acadêmico',
-                'Competição Acadêmica',
-                'Estágio Acadêmico vs Competição'
-            )
-            if fig:
-                st.plotly_chart(fig, use_container_width=True)
-    
-    with tab2:
-        # Estatísticas detalhadas por estágio
-        stage_stats = df_filtrado.groupby('Estágio Acadêmico').agg({
-            'Índice de Estresse': ['count', 'mean', 'median', 'std'],
-            'Pressão dos Colegas': 'mean',
-            'Pressão Familiar': 'mean',
-            'Competição Acadêmica': 'mean'
-        }).round(2)
-        
-        stage_stats.columns = ['Contagem', 'Estresse Médio', 'Estresse Mediano', 'Desvio Estresse', 
-                              'Pressão Colegas', 'Pressão Familiar', 'Competição']
-        st.dataframe(stage_stats, use_container_width=True)
 
 def display_data_export(df_filtrado):
     """Exibe seção de dados e exportação"""
@@ -848,11 +763,6 @@ def main():
     
     # Análise de Hábitos
     display_habits_analysis(df_filtrado)
-    
-    st.markdown("---")
-    
-    # Análise por Estágio Acadêmico
-    display_academic_stage_analysis(df_filtrado)
     
     st.markdown("---")
     
