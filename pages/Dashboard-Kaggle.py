@@ -150,7 +150,6 @@ def preprocess_text(text):
 
 @st.cache_data
 def analyze_sentiment_naive_bayes(texts):
-    """Análise de sentimentos usando Naive Bayes"""
     training_data = {
         'texts': [
             'ansiosa nervosa preocupada estressada sobrecarregada cansada triste desanimada desmotivada frustrada exausta',
@@ -185,7 +184,6 @@ def analyze_sentiment_naive_bayes(texts):
     return sentiments
 
 def create_metric_card(value, label, help_text=None):
-    """Cria um card de métrica estilizado"""
     st.markdown(f"""
     <div class="metric-card">
         <div class="metric-value">{value}</div>
@@ -391,7 +389,6 @@ def apply_filters(df, filters):
     return df_filtrado
 
 def display_metrics(df_filtrado):
-    """Exibe as métricas principais de forma organizada"""
     create_section_header("📊 Visão Geral")
     
     # Primeira linha de métricas
@@ -468,7 +465,6 @@ def display_metrics(df_filtrado):
         )
 
 def display_demographic_analysis(df_filtrado):
-    """Exibe análise demográfica"""
     create_section_header("👥 Análise Demográfica")
     
     col1, col2 = st.columns(2)
@@ -559,7 +555,6 @@ def display_environment_analysis(df_filtrado):
     competition_acad = 'Competição Acadêmica'
     column_stress = 'Índice de Estresse'
     
-    """Exibe análise do ambiente de estudo"""
     create_section_header("🏠 Análise do Ambiente de Estudo")
     
     environment, competition =  st.tabs([":house_with_garden: Ambiente de Estudos", ":men_wrestling: Competição Acadêmica"])
@@ -643,7 +638,6 @@ def display_habits_analysis(df_filtrado):
     column_stress = 'Índice de Estresse' 
     column_vices = 'Vícios'
     
-    """Exibe análise de hábitos"""
     create_section_header("🚭 Análise de Hábitos")
     
     bar_vicios, plot_vicios = st.columns(2)
@@ -681,7 +675,6 @@ def display_habits_analysis(df_filtrado):
 
 
 def display_data_export(df_filtrado):
-    """Exibe seção de dados e exportação"""
     create_section_header("📋 Dados e Exportação")
     
     tab1, tab2 = st.tabs(["📊 Dados Filtrados", "💾 Exportar"])
@@ -731,7 +724,6 @@ def display_data_export(df_filtrado):
             st.metric("Registros para exportar", len(df_export))
 
 def display_footer():
-    """Exibe o footer"""
     st.markdown("---")
     st.markdown(
         """
