@@ -488,11 +488,8 @@ def display_demographic_analysis(df_filtrado):
 def display_pressure_analysis(df_filtrado):
     column_stress = 'Índice de Estresse'
     column_pression_family = 'Pressão Familiar'
-    column_pression_friends = 'Pressão dos Colegas'
     column_strategy = 'Estratégia de Enfrentamento'
     
-    
-    """Exibe análise de pressões"""
     create_section_header("📈 Análise de Pressões e Estresse")
     
     tab1, tab2 = st.tabs(["🎯 Pressões Familiares", "😰 Estratégias de Enfrentamento"])
@@ -518,16 +515,18 @@ def display_pressure_analysis(df_filtrado):
             # Pressão familiar vs estresse
             fig = create_boxplot(
                 df_filtrado,
-                'Pressão Familiar',
-                'Índice de Estresse',
+                column_pression_family,
+                column_stress,
                 'Concentração'
             )
+            fig.update_xaxes(showticklabels=False)
+            
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
+        col1 = st.columns(1)[0]
         col2 = st.columns(1)[0]
-        col1 = st.columns(1)[0] 
         
         with col1:
             # Gráfico de barras das estratégias
@@ -543,7 +542,17 @@ def display_pressure_analysis(df_filtrado):
             )
     
         with col2:
-            pass
+            fig = create_boxplot(
+                df_filtrado,
+                column_strategy,
+                column_stress,
+                'Concentração'
+            )
+            
+            fig.update_xaxes(showticklabels=False)
+            
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
 
 def display_environment_analysis(df_filtrado):
     study_env = 'Ambiente de Estudo'
@@ -580,9 +589,9 @@ def display_environment_analysis(df_filtrado):
             # Ambiente vs Competição
             fig = create_boxplot(
                 df_filtrado,
-                'Ambiente de Estudo',
-                'Competição Acadêmica',
-                'Ambiente de Estudo vs Competição Acadêmica'
+                study_env,
+                column_stress,
+                'Ambiente de Estudo vs Índice de Estresse'
             )
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
@@ -611,9 +620,9 @@ def display_environment_analysis(df_filtrado):
                 # Ambiente vs Estresse
             fig = create_boxplot(
                 df_filtrado,
-                'Competição Acadêmica',
-                'Índice de Estresse',
-                'Competição Acadêmica vs Índice de Estresse'
+                competition_acad,
+                column_stress,
+                'Índice de Estresse vs Competição Acadêmica'
             )
             if fig:
                 st.plotly_chart(fig, use_container_width=True)
@@ -631,22 +640,44 @@ def display_environment_analysis(df_filtrado):
     st.dataframe(env_stats, use_container_width=True)
 
 def display_habits_analysis(df_filtrado):
+    column_stress = 'Índice de Estresse' 
+    column_vices = 'Vícios'
+    
     """Exibe análise de hábitos"""
     create_section_header("🚭 Análise de Hábitos")
     
-    plot_vicios = st.columns(1)[0]
+    bar_vicios, plot_vicios = st.columns(2)
     
+    with bar_vicios:
+        # Gráfico de barras dos hábitos
+        fig = px.bar(
+            df_filtrado.groupby(column_vices)[column_stress]
+            .mean()
+            .reset_index(),
+            x=column_vices,
+            y=column_stress,
+            title='Distribuição dos Hábitos dos Estudantes',
+            labels={column_vices: 'Vícios', column_stress: 'Contagem'},
+            color=column_vices,
+            color_continuous_scale='viridis'
+        )
+        
+        fig.update_xaxes(showticklabels=False)
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
     with plot_vicios:
         # Hábitos vs Estresse
         fig = create_boxplot(
             df_filtrado,
             'Vícios',
             'Índice de Estresse',
-            'Hábitos vs Índice de Estresse'
+            'Vícios vs Índice de Estresse'
         )
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-    
+        
+        fig.update_xaxes(showticklabels=False)
+        
+        st.plotly_chart(fig, use_container_width=True)
 
 
 def display_data_export(df_filtrado):
